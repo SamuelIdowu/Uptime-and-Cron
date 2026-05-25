@@ -52,6 +52,7 @@ export const users = pgTable("users", {
   id: varchar("id", { length: 255 }).primaryKey(), // Clerk user ID
   email: varchar("email", { length: 255 }).notNull().unique(),
   stripeCustomerId: varchar("stripe_customer_id", { length: 255 }).unique(),
+  appUrl: varchar("app_url", { length: 2048 }),
   plan: planEnum("plan").notNull().default("free"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });

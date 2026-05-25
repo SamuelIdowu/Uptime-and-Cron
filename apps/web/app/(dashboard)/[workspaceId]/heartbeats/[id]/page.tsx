@@ -1,19 +1,22 @@
 import { auth } from "@clerk/nextjs/server";
-import { db, heartbeatMonitors, heartbeatPings, heartbeatDailyAggregates } from "@steady-state/db";
+import { db, heartbeatMonitors, heartbeatPings, heartbeatDailyAggregates, users } from "@steady-state/db";
 import { and, eq, desc, gte } from "drizzle-orm";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft, Activity, Clock, ShieldCheck, Terminal, Heart, Settings2, Zap, Copy, BarChart3, History } from "lucide-react";
+import { ArrowLeft, Activity, Clock, ShieldCheck, Terminal, Heart, Settings2, Zap, BarChart3, History } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { StatusDot } from "@/components/status-dot";
 import { StatusBadge } from "@/components/status-badge";
 import { CopyField } from "@/components/copy-field";
+import { CopyButton } from "@/components/copy-button";
+import { IntegrationSnippet } from "@/components/integration-snippet";
 import { PingCalendar } from "@/components/ping-calendar";
 import { UptimeBar, DailyStatus } from "@/components/uptime-bar";
 import { PingTimingChart } from "@/components/ping-timing-chart";
 import { formatDistanceToNow, subDays, startOfDay, endOfDay, isSameDay } from "date-fns";
 import { HeartbeatPageActions } from "@/components/heartbeat-page-actions";
 import { cn } from "@/lib/utils";
+import { headers } from "next/headers";
 
 export default async function HeartbeatDetailPage({
   params,
@@ -29,15 +32,20 @@ export default async function HeartbeatDetailPage({
 
   const ninetyDaysAgo = subDays(new Date(), 90);
 
-  const heartbeat = await db.query.heartbeatMonitors.findFirst({
-    where: and(eq(heartbeatMonitors.id, id), eq(heartbeatMonitors.userId, userId)),
-    with: {
-      dailyAggregates: {
-        where: gte(heartbeatDailyAggregates.date, ninetyDaysAgo),
-        orderBy: desc(heartbeatDailyAggregates.date),
+  const [heartbeat, user] = await Promise.all([
+    db.query.heartbeatMonitors.findFirst({
+      where: and(eq(heartbeatMonitors.id, id), eq(heartbeatMonitors.userId, userId)),
+      with: {
+        dailyAggregates: {
+          where: gte(heartbeatDailyAggregates.date, ninetyDaysAgo),
+          orderBy: desc(heartbeatDailyAggregates.date),
+        },
       },
-    },
-  });
+    }),
+    db.query.users.findFirst({
+      where: eq(users.id, userId),
+    })
+  ]);
 
   if (!heartbeat) {
     notFound();
@@ -50,7 +58,12 @@ export default async function HeartbeatDetailPage({
     .orderBy(desc(heartbeatPings.receivedAt));
 
   const rollups = heartbeat.dailyAggregates;
-  const pingUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/ping/${heartbeat.pingToken}`;
+
+  // Robust URL detection
+  const host = (await headers()).get("host");
+  const protocol = process.env.NODE_ENV === "development" ? "http" : "https";
+  const baseUrl = user?.appUrl || process.env.NEXT_PUBLIC_APP_URL || `${protocol}://${host}`;
+  const pingUrl = `${baseUrl}/api/ping/${heartbeat.pingToken}`;
 
   const currentStatus = heartbeat.paused ? "paused" : heartbeat.status;
 
@@ -239,17 +252,7 @@ export default async function HeartbeatDetailPage({
                   <CopyField value={pingUrl} />
                 </div>
 
-                <div className="space-y-3">
-                  <p className="eyebrow text-[10px] text-mute">cURL Hook</p>
-                  <div className="bg-secondary p-4 rounded-sm border border-border font-mono text-[11px] relative group overflow-hidden">
-                    <code className="text-primary-soft break-all pr-8 block">
-                      curl -m 10 --retry 3 {pingUrl}
-                    </code>
-                    <Button size="icon" variant="ghost" className="absolute right-1 top-1 size-7 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Copy className="size-3" />
-                    </Button>
-                  </div>
-                </div>
+                <IntegrationSnippet url={pingUrl} />
               </div>
             </section>
 

@@ -29,12 +29,21 @@ for (const envPath of envCandidates) {
 
 const databaseUrl = process.env.DATABASE_URL;
 
-if (!databaseUrl && process.env.NODE_ENV === "production") {
-  throw new Error("DATABASE_URL is not set");
-}
-
-const sql = neon(databaseUrl || "");
-export const db = drizzle(sql, { schema });
+// Initialize lazily to avoid errors during import if env is not yet loaded
+let sql: any;
+export const db = new Proxy({} as any, {
+  get(target, prop, receiver) {
+    if (!sql) {
+      const url = process.env.DATABASE_URL;
+      if (!url) {
+        throw new Error("DATABASE_URL is not set. Ensure .env is loaded before accessing the database.");
+      }
+      sql = neon(url);
+    }
+    const d = drizzle(sql, { schema });
+    return Reflect.get(d, prop, receiver);
+  }
+});
 
 export * from "./schema";
 

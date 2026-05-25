@@ -1,5 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
-import { db, alertSettings } from "@steady-state/db";
+import { db, alertSettings, users } from "@steady-state/db";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -9,6 +9,7 @@ const settingsSchema = z.object({
   slackWebhookUrl: z.string().url().optional().nullable(),
   telegramChatId: z.string().optional().nullable(),
   telegramBotToken: z.string().optional().nullable(),
+  appUrl: z.string().url().optional().nullable(),
 });
 
 export async function GET() {
@@ -23,7 +24,17 @@ export async function GET() {
       where: eq(alertSettings.userId, userId),
     });
 
-    return NextResponse.json(settings);
+    const user = await db.query.users.findFirst({
+      where: eq(users.id, userId),
+      columns: {
+        appUrl: true,
+      }
+    });
+
+    return NextResponse.json({
+      ...settings,
+      appUrl: user?.appUrl,
+    });
   } catch (error) {
     console.error("[SETTINGS_GET]", error);
     return new NextResponse("Internal Error", { status: 500 });
@@ -41,16 +52,29 @@ export async function PATCH(req: Request) {
     const json = await req.json();
     const body = settingsSchema.parse(json);
 
-    const settings = await db
-      .update(alertSettings)
-      .set({
-        ...body,
-        updatedAt: new Date(),
-      })
-      .where(eq(alertSettings.userId, userId))
-      .returning();
+    const { appUrl: newAppUrl, ...alertBody } = body;
 
-    return NextResponse.json(settings[0]);
+    const results = await Promise.all([
+      db
+        .update(alertSettings)
+        .set({
+          ...alertBody,
+          updatedAt: new Date(),
+        })
+        .where(eq(alertSettings.userId, userId))
+        .returning(),
+      newAppUrl !== undefined ? 
+        db.update(users).set({ appUrl: newAppUrl }).where(eq(users.id, userId)).returning({ appUrl: users.appUrl }) : 
+        Promise.resolve([])
+    ]);
+
+    const settings = results[0][0];
+    const user = results[1][0];
+
+    return NextResponse.json({
+      ...settings,
+      appUrl: user?.appUrl ?? (await db.query.users.findFirst({ where: eq(users.id, userId), columns: { appUrl: true } }))?.appUrl,
+    });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return new NextResponse(error.message, { status: 400 });

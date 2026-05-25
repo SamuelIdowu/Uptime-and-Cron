@@ -46,6 +46,8 @@ async function syncUserRecord(userId: string) {
   return newUser[0];
 }
 
+import { headers } from "next/headers";
+
 export default async function InfrastructureDashboard({
   params,
 }: {
@@ -73,6 +75,10 @@ export default async function InfrastructureDashboard({
   if (!user) {
     user = await syncUserRecord(userId);
   }
+
+  const host = (await headers()).get("host");
+  const protocol = process.env.NODE_ENV === "development" ? "http" : "https";
+  const baseUrl = user?.appUrl || process.env.NEXT_PUBLIC_APP_URL || `${protocol}://${host}`;
 
   // Fetch monitors and heartbeats sequentially for debugging performance marks
   const userMonitors = await db.query.monitors.findMany({
@@ -264,7 +270,7 @@ export default async function InfrastructureDashboard({
               <div className="flex items-center justify-between">
                 <h2 className="eyebrow text-mute opacity-60">Active Infrastructure</h2>
               </div>
-              <MonitorTable monitors={unifiedMonitors} workspaceId={userId} />
+              <MonitorTable monitors={unifiedMonitors} workspaceId={userId} baseUrl={baseUrl} />
             </div>
           )}
         </section>

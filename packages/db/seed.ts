@@ -1,22 +1,3 @@
-import path from "path";
-import { fileURLToPath } from "url";
-import dotenv from "dotenv";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Try common .env locations in a monorepo
-const envPaths = [
-  path.resolve(__dirname, "../../.env"),            // Root
-  path.resolve(__dirname, "../../apps/web/.env"),    // Web App
-  path.resolve(__dirname, "../../apps/worker/.env"), // Worker
-  path.resolve(__dirname, ".env"),                   // Local
-];
-
-for (const envPath of envPaths) {
-  dotenv.config({ path: envPath });
-}
-
 import { db } from "./index";
 import * as schema from "./schema";
 import { subDays, subHours, subMinutes } from "date-fns";

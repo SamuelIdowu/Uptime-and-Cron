@@ -2,8 +2,9 @@ import { auth } from "@clerk/nextjs/server";
 import { db, alertSettings, users, monitors } from "@steady-state/db";
 import { eq, sql } from "drizzle-orm";
 import { redirect } from "next/navigation";
-import { Activity, Bell, Mail, Slack, CreditCard, ShieldAlert } from "lucide-react";
+import { Activity, Bell, Mail, Slack, CreditCard, ShieldAlert, Globe } from "lucide-react";
 import { AlertChannelForm } from "./alert-channel-form";
+import { AppUrlForm } from "./app-url-form";
 import { Button } from "@/components/ui/button";
 import { PLAN_LIMITS } from "@/lib/constants";
 
@@ -54,6 +55,16 @@ export default async function SettingsPage({
         </header>
 
         <div className="space-y-20 pb-20">
+          {/* System Config Section */}
+          <section className="space-y-8">
+            <div className="space-y-2">
+              <h2 className="display-sm text-ink uppercase tracking-tight">System Configuration</h2>
+              <p className="text-xs text-mute font-mono">Manage your global application settings and base infrastructure URLs.</p>
+            </div>
+            
+            <AppUrlForm initialAppUrl={user?.appUrl} />
+          </section>
+
           {/* Notifications Section */}
           <section className="space-y-8">
             <div className="space-y-2">

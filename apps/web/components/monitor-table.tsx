@@ -26,12 +26,20 @@ type UnifiedMonitor =
 interface MonitorTableProps {
   monitors: UnifiedMonitor[];
   workspaceId: string;
+  baseUrl?: string;
 }
 
-export function MonitorTable({ monitors, workspaceId }: MonitorTableProps) {
+export function MonitorTable({ monitors, workspaceId, baseUrl }: MonitorTableProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState<string | null>(null);
   const [monitorToDelete, setMonitorToDelete] = useState<UnifiedMonitor | null>(null);
+
+  const onCopyPingUrl = (e: React.MouseEvent, token: string) => {
+    e.stopPropagation();
+    const url = `${baseUrl || window.location.origin}/api/ping/${token}`;
+    navigator.clipboard.writeText(url);
+    // Optional: add toast notification here
+  };
 
   const onTogglePause = async (e: React.MouseEvent, monitor: UnifiedMonitor) => {
     e.stopPropagation();
@@ -201,6 +209,14 @@ export function MonitorTable({ monitors, workspaceId }: MonitorTableProps) {
                         >
                           <Edit2 className="size-4 mr-2 text-mute" /> Edit
                         </DropdownMenuItem>
+                        {!isHttp && (
+                          <DropdownMenuItem 
+                            onClick={(e) => onCopyPingUrl(e, (monitor as any).pingToken)}
+                            className="flex items-center px-3 py-2 text-[11px] font-bold eyebrow cursor-pointer hover:bg-accent focus:bg-accent"
+                          >
+                            <ExternalLink className="size-4 mr-2 text-primary-soft" /> Copy Ping URL
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuSeparator className="bg-border/40 my-1" />
                         <DropdownMenuItem 
                           onClick={(e) => {
