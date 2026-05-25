@@ -1,0 +1,45 @@
+
+> @steady-state/web@0.1.0 build C:\Users\USER\Desktop\saas projects\uptime_and_cron\apps\web
+> next build
+
+▲ Next.js 16.2.6 (Turbopack)
+- Environments: .env
+
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+  Creating an optimized production build ...
+✓ Compiled successfully in 23.7s
+  Running TypeScript ...
+  Finished TypeScript in 16.4s ...
+  Collecting page data using 3 workers ...
+  Generating static pages using 3 workers (0/12) ...
+  Generating static pages using 3 workers (3/12) 
+  Generating static pages using 3 workers (6/12) 
+  Generating static pages using 3 workers (9/12) 
+✓ Generating static pages using 3 workers (12/12) in 1042ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ƒ /
+├ ƒ /_not-found
+├ ƒ /api/heartbeats
+├ ƒ /api/heartbeats/[id]
+├ ƒ /api/internal/alert
+├ ƒ /api/monitors
+├ ƒ /api/monitors/[id]
+├ ƒ /api/ping/[token]
+├ ƒ /api/settings
+├ ƒ /api/settings/slack/test
+├ ƒ /api/webhooks/clerk
+├ ƒ /heartbeats/[id]
+├ ƒ /heartbeats/new
+├ ƒ /monitors/[id]
+├ ƒ /monitors/new
+├ ƒ /settings
+├ ƒ /sign-in/[[...sign-in]]
+└ ƒ /sign-up/[[...sign-up]]
+
+
+ƒ Proxy (Middleware)
+
+ƒ  (Dynamic)  server-rendered on demand
+

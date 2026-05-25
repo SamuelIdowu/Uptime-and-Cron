@@ -1,0 +1,17 @@
+import { z } from "zod";
+
+export const monitorSchema = z.object({
+  name: z.string().min(1, "Name is required").max(100, "Name is too long"),
+  url: z.string().url("Invalid URL").max(2048, "URL is too long"),
+  intervalMinutes: z.coerce.number().refine((val) => [1, 3, 5, 10, 30].includes(val), {
+    message: "Invalid interval",
+  }),
+  expectedStatus: z.coerce.number().int().min(100).max(599),
+});
+
+export const updateMonitorSchema = monitorSchema.partial().extend({
+  paused: z.boolean().optional(),
+});
+
+export type MonitorInput = z.infer<typeof monitorSchema>;
+export type UpdateMonitorInput = z.infer<typeof updateMonitorSchema>;

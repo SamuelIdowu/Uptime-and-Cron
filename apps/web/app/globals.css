@@ -1,0 +1,81 @@
+@import "tailwindcss";
+
+@plugin "tailwindcss-animate";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --color-background: oklch(0.12 0 0);
+  --color-foreground: oklch(0.95 0 0);
+  
+  --color-card: oklch(0.15 0 0);
+  --color-card-foreground: oklch(0.9 0 0);
+  
+  --color-popover: oklch(0.15 0 0);
+  --color-popover-foreground: oklch(0.9 0 0);
+  
+  --color-primary: oklch(0.7 0.2 145);
+  --color-primary-foreground: oklch(0.15 0 0);
+  
+  --color-secondary: oklch(0.25 0 0);
+  --color-secondary-foreground: oklch(0.9 0 0);
+  
+  --color-muted: oklch(0.2 0 0);
+  --color-muted-foreground: oklch(0.6 0 0);
+  
+  --color-accent: oklch(0.25 0.02 145);
+  --color-accent-foreground: oklch(0.9 0 0);
+  
+  --color-destructive: oklch(0.6 0.2 25);
+  --color-destructive-foreground: oklch(0.95 0 0);
+  
+  --color-border: oklch(0.25 0 0);
+  --color-input: oklch(0.2 0 0);
+  --color-ring: oklch(0.7 0.2 145);
+
+  --color-up: oklch(0.7 0.2 145);
+  --color-up-dim: oklch(0.2 0.05 145);
+  --color-down: oklch(0.6 0.2 25);
+  --color-down-dim: oklch(0.15 0.05 25);
+  --color-late: oklch(0.8 0.15 75);
+  --color-late-dim: oklch(0.2 0.05 75);
+  --color-paused: oklch(0.5 0 0);
+  --color-pending: oklch(0.6 0.15 250);
+
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  --radius-sm: 0px;
+  --radius-md: 2px;
+  --radius-lg: 4px;
+
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+
+  @keyframes accordion-down {
+    from {
+      height: 0;
+    }
+    to {
+      height: var(--radix-accordion-content-height);
+    }
+  }
+  @keyframes accordion-up {
+    from {
+      height: var(--radix-accordion-content-height);
+    }
+    to {
+      height: 0;
+    }
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+  }
+}
