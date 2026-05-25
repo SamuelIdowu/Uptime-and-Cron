@@ -1,5 +1,5 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
-import { db, monitors, users, alertSettings } from "@steady-state/db";
+import { db, monitors, users, alertSettings, monitorTargets } from "@steady-state/db";
 import { desc, eq, count } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { monitorSchema } from "@/lib/validations/monitor";
@@ -13,11 +13,13 @@ export async function GET() {
   }
 
   try {
-    const userMonitors = await db
-      .select()
-      .from(monitors)
-      .where(eq(monitors.userId, userId))
-      .orderBy(desc(monitors.createdAt));
+    const userMonitors = await db.query.monitors.findMany({
+      where: eq(monitors.userId, userId),
+      orderBy: desc(monitors.createdAt),
+      with: {
+        targets: true,
+      },
+    });
 
     return NextResponse.json(userMonitors);
   } catch (error) {
@@ -89,12 +91,13 @@ export async function POST(req: Request) {
         return new NextResponse(`Minimum interval for your plan is ${limits.minIntervalMinutes} minutes.`, { status: 403 });
     }
 
-    const monitor = await db
+    const [monitor] = await db
       .insert(monitors)
       .values({
         userId,
         name: body.name,
-        url: body.url,
+        url: body.targets[0].url,
+        healthThreshold: body.healthThreshold,
         intervalMinutes: body.intervalMinutes,
         expectedStatus: body.expectedStatus,
         autoRetry: body.autoRetry,
@@ -102,7 +105,17 @@ export async function POST(req: Request) {
       })
       .returning();
 
-    return NextResponse.json(monitor[0]);
+    // Insert targets
+    if (body.targets && body.targets.length > 0) {
+      await db.insert(monitorTargets).values(
+        body.targets.map((t) => ({
+          monitorId: monitor.id,
+          url: t.url,
+        }))
+      );
+    }
+
+    return NextResponse.json(monitor);
   } catch (error) {
     if (error instanceof Error && error.name === "ZodError") {
       return new NextResponse(error.message, { status: 400 });

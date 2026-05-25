@@ -1,5 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
-import { db, monitors } from "@steady-state/db";
+import { db, monitors, monitorTargets } from "@steady-state/db";
 import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { updateMonitorSchema } from "@/lib/validations/monitor";
@@ -18,6 +18,9 @@ export async function GET(
   try {
     const monitor = await db.query.monitors.findFirst({
       where: and(eq(monitors.id, id), eq(monitors.userId, userId)),
+      with: {
+        targets: true,
+      },
     });
 
     if (!monitor) {
@@ -46,20 +49,38 @@ export async function PATCH(
     const json = await req.json();
     const body = updateMonitorSchema.parse(json);
 
-    const monitor = await db
+    const { targets, ...rest } = body;
+
+    const [monitor] = await db
       .update(monitors)
       .set({
-        ...body,
-        // Ensure userId stays the same
+        ...rest,
+        // If targets are provided, update the main url for compatibility
+        ...(targets && targets.length > 0 ? { url: targets[0].url } : {}),
       })
       .where(and(eq(monitors.id, id), eq(monitors.userId, userId)))
       .returning();
 
-    if (monitor.length === 0) {
+    if (!monitor) {
       return new NextResponse("Not Found or Unauthorized", { status: 404 });
     }
 
-    return NextResponse.json(monitor[0]);
+    // Update targets if provided
+    if (targets) {
+      await db.transaction(async (tx: any) => {
+        await tx.delete(monitorTargets).where(eq(monitorTargets.monitorId, id));
+        if (targets.length > 0) {
+          await tx.insert(monitorTargets).values(
+            targets.map((t: { url: string }) => ({
+              monitorId: id,
+              url: t.url,
+            }))
+          );
+        }
+      });
+    }
+
+    return NextResponse.json(monitor);
   } catch (error) {
     if (error instanceof Error && error.name === "ZodError") {
       return new NextResponse(error.message, { status: 400 });
