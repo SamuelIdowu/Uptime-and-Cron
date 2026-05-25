@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS "monitor_daily_aggregates_monitor_id_date_unique" ON "monitor_daily_aggregates" ("monitor_id","date");

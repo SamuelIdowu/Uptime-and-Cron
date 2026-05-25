@@ -1,19 +1,22 @@
 import type { Metadata } from "next";
-import { ClerkProvider } from "@clerk/nextjs";
-import { dark } from "@clerk/themes";
-import { IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
+import { Geist_Mono, Space_Grotesk, Montserrat } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
+import { ThemeProvider } from "@/components/theme-provider";
+import { ClerkThemeProvider } from "@/components/clerk-theme-provider";
 
-const sans = IBM_Plex_Sans({
+const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
+  variable: "--font-display",
+});
+
+const montserrat = Montserrat({
+  subsets: ["latin"],
   variable: "--font-sans",
 });
 
-const mono = IBM_Plex_Mono({
+const geistMono = Geist_Mono({
   subsets: ["latin"],
-  weight: ["400", "500"],
   variable: "--font-mono",
 });
 
@@ -28,19 +31,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider
-      appearance={{
-        baseTheme: dark,
-        variables: {
-          colorPrimary: "#22c55e",
-        },
-      }}
-    >
-      <html lang="en" className={cn("dark", sans.variable, mono.variable)}>
-        <body className="antialiased">
-          {children}
-        </body>
-      </html>
-    </ClerkProvider>
+    <html lang="en" suppressHydrationWarning className={cn(spaceGrotesk.variable, montserrat.variable, geistMono.variable)}>
+      <body className="antialiased">
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <ClerkThemeProvider>
+            {children}
+          </ClerkThemeProvider>
+        </ThemeProvider>
+      </body>
+    </html>
   );
 }

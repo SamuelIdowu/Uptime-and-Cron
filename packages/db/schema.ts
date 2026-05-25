@@ -9,6 +9,7 @@ import {
   text,
   pgEnum,
   index,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 // Enums
@@ -18,6 +19,11 @@ export const monitorStatusEnum = pgEnum("monitor_status", [
   "down",
   "paused",
   "pending",
+]);
+export const sslPolicyEnum = pgEnum("ssl_policy", [
+  "strict",
+  "standard",
+  "none",
 ]);
 export const heartbeatStatusEnum = pgEnum("heartbeat_status", [
   "up",
@@ -32,13 +38,14 @@ export const alertTypeEnum = pgEnum("alert_type", [
   "late",
   "recovered",
 ]);
-export const alertChannelEnum = pgEnum("alert_channel", ["email", "slack"]);
+export const alertChannelEnum = pgEnum("alert_channel", ["email", "slack", "telegram"]);
 export const alertStatusEnum = pgEnum("alert_status", [
   "pending",
   "sent",
   "failed",
   "dead",
 ]);
+export const eventStatusEnum = pgEnum("event_status", ["down", "up"]);
 
 // Tables
 export const users = pgTable("users", {
@@ -66,7 +73,11 @@ export const monitors = pgTable(
     uptime7d: decimal("uptime_7d", { precision: 5, scale: 2 }),
     uptime30d: decimal("uptime_30d", { precision: 5, scale: 2 }),
     avgResponseMs: integer("avg_response_ms"),
+    autoRetry: integer("auto_retry").notNull().default(3),
+    sslPolicy: sslPolicyEnum("ssl_policy").notNull().default("strict"),
     paused: boolean("paused").notNull().default(false),
+    sslExpiryAt: timestamp("ssl_expiry_at"),
+    assertions: text("assertions"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => ({
@@ -86,7 +97,7 @@ export const monitorEvents = pgTable(
     monitorId: uuid("monitor_id")
       .notNull()
       .references(() => monitors.id, { onDelete: "cascade" }),
-    status: pgEnum("event_status", ["down", "up"])("status").notNull(),
+    status: eventStatusEnum("status").notNull(),
     httpStatus: integer("http_status"),
     responseMs: integer("response_ms"),
     errorMessage: text("error_message"),
@@ -133,11 +144,38 @@ export const heartbeatPings = pgTable(
       .references(() => heartbeatMonitors.id, { onDelete: "cascade" }),
     receivedAt: timestamp("received_at").notNull().defaultNow(),
     sourceIp: varchar("source_ip", { length: 45 }),
+    durationMs: integer("duration_ms"),
+    exitCode: integer("exit_code"),
+    log: text("log"),
   },
   (table) => ({
     heartbeatIdReceivedAtIdx: index(
       "heartbeat_pings_heartbeat_id_received_at_idx"
     ).on(table.heartbeatId, table.receivedAt),
+  })
+);
+
+export const heartbeatDailyAggregates = pgTable(
+  "heartbeat_daily_aggregates",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    heartbeatId: uuid("heartbeat_id")
+      .notNull()
+      .references(() => heartbeatMonitors.id, { onDelete: "cascade" }),
+    date: timestamp("date").notNull(),
+    uptimePercentage: decimal("uptime_percentage", { precision: 5, scale: 2 }).notNull(),
+    totalPings: integer("total_pings").notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    heartbeatIdDateIdx: index("heartbeat_daily_aggregates_heartbeat_id_date_idx").on(
+      table.heartbeatId,
+      table.date
+    ),
+    heartbeatIdDateUnique: uniqueIndex("heartbeat_daily_aggregates_heartbeat_id_date_unique").on(
+      table.heartbeatId,
+      table.date
+    ),
   })
 );
 
@@ -171,6 +209,53 @@ export const alerts = pgTable(
   })
 );
 
+export const monitorChecks = pgTable(
+  "monitor_checks",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    monitorId: uuid("monitor_id")
+      .notNull()
+      .references(() => monitors.id, { onDelete: "cascade" }),
+    status: monitorStatusEnum("status").notNull(),
+    httpStatus: integer("http_status"),
+    responseMs: integer("response_ms"),
+    errorMessage: text("error_message"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    monitorIdCreatedAtIdx: index("monitor_checks_monitor_id_created_at_idx").on(
+      table.monitorId,
+      table.createdAt
+    ),
+  })
+);
+
+export const monitorDailyAggregates = pgTable(
+  "monitor_daily_aggregates",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    monitorId: uuid("monitor_id")
+      .notNull()
+      .references(() => monitors.id, { onDelete: "cascade" }),
+    date: timestamp("date").notNull(),
+    avgResponseMs: integer("avg_response_ms").notNull(),
+    uptimePercentage: decimal("uptime_percentage", { precision: 5, scale: 2 }).notNull(),
+    totalChecks: integer("total_checks").notNull(),
+    failedChecks: integer("failed_checks").notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    monitorIdDateIdx: index("monitor_daily_aggregates_monitor_id_date_idx").on(
+      table.monitorId,
+      table.date
+    ),
+    monitorIdDateUnique: uniqueIndex("monitor_daily_aggregates_monitor_id_date_unique").on(
+      table.monitorId,
+      table.date
+    ),
+  })
+);
+
 export const alertSettings = pgTable("alert_settings", {
   userId: varchar("user_id", { length: 255 })
     .primaryKey()
@@ -178,13 +263,111 @@ export const alertSettings = pgTable("alert_settings", {
   email: varchar("email", { length: 255 }).notNull(),
   slackWebhookUrl: varchar("slack_webhook_url", { length: 2048 }),
   slackVerified: boolean("slack_verified").notNull().default(false),
+  telegramChatId: varchar("telegram_chat_id", { length: 255 }),
+  telegramBotToken: varchar("telegram_bot_token", { length: 255 }),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
+
+import { relations } from "drizzle-orm";
+
+// ... (keep existing enums and tables)
+
+// Relations
+export const usersRelations = relations(users, ({ many, one }) => ({
+  monitors: many(monitors),
+  heartbeatMonitors: many(heartbeatMonitors),
+  alerts: many(alerts),
+  alertSettings: one(alertSettings, {
+    fields: [users.id],
+    references: [alertSettings.userId],
+  }),
+}));
+
+export const monitorsRelations = relations(monitors, ({ one, many }) => ({
+  user: one(users, {
+    fields: [monitors.userId],
+    references: [users.id],
+  }),
+  events: many(monitorEvents),
+  checks: many(monitorChecks),
+  dailyAggregates: many(monitorDailyAggregates),
+  alerts: many(alerts),
+}));
+
+export const monitorDailyAggregatesRelations = relations(monitorDailyAggregates, ({ one }) => ({
+  monitor: one(monitors, {
+    fields: [monitorDailyAggregates.monitorId],
+    references: [monitors.id],
+  }),
+}));
+
+export const monitorChecksRelations = relations(monitorChecks, ({ one }) => ({
+  monitor: one(monitors, {
+    fields: [monitorChecks.monitorId],
+    references: [monitors.id],
+  }),
+}));
+
+export const monitorEventsRelations = relations(monitorEvents, ({ one }) => ({
+  monitor: one(monitors, {
+    fields: [monitorEvents.monitorId],
+    references: [monitors.id],
+  }),
+}));
+
+export const heartbeatMonitorsRelations = relations(heartbeatMonitors, ({ one, many }) => ({
+  user: one(users, {
+    fields: [heartbeatMonitors.userId],
+    references: [users.id],
+  }),
+  pings: many(heartbeatPings),
+  dailyAggregates: many(heartbeatDailyAggregates),
+  alerts: many(alerts),
+}));
+
+export const heartbeatDailyAggregatesRelations = relations(heartbeatDailyAggregates, ({ one }) => ({
+  heartbeat: one(heartbeatMonitors, {
+    fields: [heartbeatDailyAggregates.heartbeatId],
+    references: [heartbeatMonitors.id],
+  }),
+}));
+
+export const heartbeatPingsRelations = relations(heartbeatPings, ({ one }) => ({
+  heartbeat: one(heartbeatMonitors, {
+    fields: [heartbeatPings.heartbeatId],
+    references: [heartbeatMonitors.id],
+  }),
+}));
+
+export const alertsRelations = relations(alerts, ({ one }) => ({
+  user: one(users, {
+    fields: [alerts.userId],
+    references: [users.id],
+  }),
+  monitor: one(monitors, {
+    fields: [alerts.monitorId],
+    references: [monitors.id],
+  }),
+  heartbeat: one(heartbeatMonitors, {
+    fields: [alerts.heartbeatId],
+    references: [heartbeatMonitors.id],
+  }),
+}));
+
+export const alertSettingsRelations = relations(alertSettings, ({ one }) => ({
+  user: one(users, {
+    fields: [alertSettings.userId],
+    references: [users.id],
+  }),
+}));
 
 // Types
 export type User = typeof users.$inferSelect;
 export type Monitor = typeof monitors.$inferSelect;
 export type MonitorEvent = typeof monitorEvents.$inferSelect;
+export type MonitorCheck = typeof monitorChecks.$inferSelect;
+export type MonitorDailyAggregate = typeof monitorDailyAggregates.$inferSelect;
+export type HeartbeatDailyAggregate = typeof heartbeatDailyAggregates.$inferSelect;
 export type HeartbeatMonitor = typeof heartbeatMonitors.$inferSelect;
 export type HeartbeatPing = typeof heartbeatPings.$inferSelect;
 export type Alert = typeof alerts.$inferSelect;

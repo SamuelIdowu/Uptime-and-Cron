@@ -7,10 +7,12 @@ import { z } from "zod";
 const settingsSchema = z.object({
   email: z.string().email().optional(),
   slackWebhookUrl: z.string().url().optional().nullable(),
+  telegramChatId: z.string().optional().nullable(),
+  telegramBotToken: z.string().optional().nullable(),
 });
 
 export async function GET() {
-  const { userId } = auth();
+  const { userId } = await auth();
 
   if (!userId) {
     return new NextResponse("Unauthorized", { status: 401 });
@@ -29,7 +31,7 @@ export async function GET() {
 }
 
 export async function PATCH(req: Request) {
-  const { userId } = auth();
+  const { userId } = await auth();
 
   if (!userId) {
     return new NextResponse("Unauthorized", { status: 401 });

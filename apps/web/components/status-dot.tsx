@@ -7,17 +7,17 @@ interface StatusDotProps {
 }
 
 const sizeMap = {
-  sm: "size-2",
-  md: "size-2.5",
+  sm: "size-1.5",
+  md: "size-2",
   lg: "size-3",
 };
 
 const statusMap = {
-  up: "bg-primary shadow-[0_0_8px_rgba(34,197,94,0.4)] animate-pulse",
-  down: "bg-destructive shadow-[0_0_10px_rgba(239,68,68,0.5)] animate-pulse [animation-duration:1s]",
-  late: "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)] animate-pulse [animation-duration:1.5s]",
-  paused: "bg-muted-foreground",
-  pending: "bg-blue-500",
+  up: "bg-status-up shadow-[0_0_8px_rgba(0,217,146,0.4)] animate-pulse",
+  down: "bg-status-down shadow-[0_0_8px_rgba(239,68,68,0.4)]",
+  late: "bg-status-late shadow-[0_0_8px_rgba(245,158,11,0.4)]",
+  paused: "bg-status-paused",
+  pending: "bg-status-pending",
 };
 
 export function StatusDot({ status, size = "md", className }: StatusDotProps) {

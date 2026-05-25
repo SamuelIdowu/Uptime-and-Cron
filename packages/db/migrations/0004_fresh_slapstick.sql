@@ -1,0 +1,1 @@
+ALTER TABLE "alert_settings" ADD COLUMN "telegram_bot_token" varchar(255);

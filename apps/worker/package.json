@@ -10,9 +10,12 @@
   },
   "dependencies": {
     "@steady-state/db": "workspace:*",
+    "@steady-state/notifications": "workspace:*",
     "axios": "^1.6.8",
+    "date-fns": "^4.2.1",
     "dotenv": "^16.4.5",
     "drizzle-orm": "^0.30.10",
+    "jsonpath-plus": "^10.4.0",
     "node-cron": "^3.0.3",
     "p-limit": "^7.3.0"
   },

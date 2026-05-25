@@ -17,11 +17,11 @@ export function UptimeBar({ data, className }: UptimeBarProps) {
         <div
           key={i}
           className={cn(
-            "flex-1 h-full rounded-[1px] transition-colors",
-            status === "up" && "bg-primary/80 hover:bg-primary",
-            status === "down" && "bg-destructive/80 hover:bg-destructive",
-            status === "paused" && "bg-muted-foreground/30 hover:bg-muted-foreground/50",
-            status === "no-data" && "bg-muted/30"
+            "flex-1 h-full rounded-lg transition-colors",
+            status === "up" && "bg-[var(--status-up)] hover:bg-[var(--status-up)]/80",
+            status === "down" && "bg-[var(--status-down)] hover:bg-[var(--status-down)]/80",
+            status === "paused" && "bg-[var(--status-paused)] hover:bg-[var(--status-paused)]/80",
+            status === "no-data" && "bg-muted"
           )}
           title={`Day ${30 - i} ago: ${status.toUpperCase()}`}
         />

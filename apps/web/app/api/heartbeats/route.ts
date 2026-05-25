@@ -1,5 +1,5 @@
-import { auth } from "@clerk/nextjs/server";
-import { db, heartbeatMonitors, users, monitors } from "@steady-state/db";
+import { auth, currentUser } from "@clerk/nextjs/server";
+import { db, heartbeatMonitors, users, monitors, alertSettings } from "@steady-state/db";
 import { desc, eq, count } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { heartbeatSchema } from "@/lib/validations/heartbeat";
@@ -7,7 +7,7 @@ import { generateToken } from "@/lib/utils";
 import { PLAN_LIMITS } from "@/lib/constants";
 
 export async function GET() {
-  const { userId } = auth();
+  const { userId } = await auth();
 
   if (!userId) {
     return new NextResponse("Unauthorized", { status: 401 });
@@ -28,7 +28,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const { userId } = auth();
+  const { userId } = await auth();
 
   if (!userId) {
     return new NextResponse("Unauthorized", { status: 401 });
@@ -39,14 +39,36 @@ export async function POST(req: Request) {
     const body = heartbeatSchema.parse(json);
 
     // 1. Fetch user plan and total monitor count (HTTP + Heartbeat)
-    const [user] = await db
+    let [user] = await db
       .select()
       .from(users)
       .where(eq(users.id, userId))
       .limit(1);
 
     if (!user) {
-        return new NextResponse("User not found", { status: 404 });
+        // Auto-Sync Hack: If user isn't in DB yet, create them (webhook might be slow)
+        const clerkUser = await currentUser();
+        if (!clerkUser) {
+            return new NextResponse("User not found in Clerk", { status: 404 });
+        }
+
+        const email = clerkUser.emailAddresses[0].emailAddress;
+        
+        const [newUser] = await db
+            .insert(users)
+            .values({
+                id: userId,
+                email,
+            })
+            .returning();
+        
+        user = newUser;
+
+        // Initialize alert settings
+        await db.insert(alertSettings).values({
+            userId,
+            email,
+        });
     }
 
     const [monitorCountResult] = await db
@@ -59,7 +81,7 @@ export async function POST(req: Request) {
       .from(heartbeatMonitors)
       .where(eq(heartbeatMonitors.userId, userId));
     
-    const totalCount = monitorCountResult.val + heartbeatCountResult.val;
+    const totalCount = Number(monitorCountResult.val) + Number(heartbeatCountResult.val);
 
     const limits = PLAN_LIMITS[user.plan as keyof typeof PLAN_LIMITS];
 

@@ -1,12 +1,12 @@
-import { auth } from "@clerk/nextjs/server";
-import { db, monitors, users } from "@steady-state/db";
+import { auth, currentUser } from "@clerk/nextjs/server";
+import { db, monitors, users, alertSettings } from "@steady-state/db";
 import { desc, eq, count } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { monitorSchema } from "@/lib/validations/monitor";
 import { PLAN_LIMITS } from "@/lib/constants";
 
 export async function GET() {
-  const { userId } = auth();
+  const { userId } = await auth();
 
   if (!userId) {
     return new NextResponse("Unauthorized", { status: 401 });
@@ -27,7 +27,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const { userId } = auth();
+  const { userId } = await auth();
 
   if (!userId) {
     return new NextResponse("Unauthorized", { status: 401 });
@@ -38,14 +38,36 @@ export async function POST(req: Request) {
     const body = monitorSchema.parse(json);
 
     // 1. Fetch user plan and current monitor count
-    const [user] = await db
+    let [user] = await db
       .select()
       .from(users)
       .where(eq(users.id, userId))
       .limit(1);
 
     if (!user) {
-        return new NextResponse("User not found", { status: 404 });
+        // Auto-Sync Hack: If user isn't in DB yet, create them (webhook might be slow)
+        const clerkUser = await currentUser();
+        if (!clerkUser) {
+            return new NextResponse("User not found in Clerk", { status: 404 });
+        }
+
+        const email = clerkUser.emailAddresses[0].emailAddress;
+        
+        const [newUser] = await db
+            .insert(users)
+            .values({
+                id: userId,
+                email,
+            })
+            .returning();
+        
+        user = newUser;
+
+        // Initialize alert settings
+        await db.insert(alertSettings).values({
+            userId,
+            email,
+        });
     }
 
     const [monitorCountResult] = await db
@@ -53,7 +75,7 @@ export async function POST(req: Request) {
       .from(monitors)
       .where(eq(monitors.userId, userId));
     
-    const monitorCount = monitorCountResult.val;
+    const monitorCount = Number(monitorCountResult.val);
 
     const limits = PLAN_LIMITS[user.plan as keyof typeof PLAN_LIMITS];
 
@@ -75,6 +97,8 @@ export async function POST(req: Request) {
         url: body.url,
         intervalMinutes: body.intervalMinutes,
         expectedStatus: body.expectedStatus,
+        autoRetry: body.autoRetry,
+        sslPolicy: body.sslPolicy,
       })
       .returning();
 

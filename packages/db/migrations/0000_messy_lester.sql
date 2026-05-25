@@ -29,6 +29,12 @@ EXCEPTION
 END $$;
 --> statement-breakpoint
 DO $$ BEGIN
+ CREATE TYPE "public"."event_status" AS ENUM('down', 'up');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
  CREATE TYPE "public"."plan" AS ENUM('free', 'paid');
 EXCEPTION
  WHEN duplicate_object THEN null;

@@ -1,79 +1,62 @@
-import { db, heartbeatMonitors } from "@steady-state/db";
-import { eq, and, isNull, lte, or, sql } from "drizzle-orm";
-import axios from "axios";
+import { db, heartbeatMonitors, dispatchAlerts } from "@steady-state/db";
+import { eq, and, isNull, or, sql } from "drizzle-orm";
 
 export async function checkHeartbeats() {
   const now = new Date();
   console.log(`[Heartbeat] Starting check at ${now.toISOString()}`);
 
   try {
-    // Fetch monitors that are not paused and are overdue
-    // Overdue = lastPingAt < now - (periodMinutes + graceMinutes)
-    const overdueMonitors = await db
+    // Fetch monitors that are not paused and might be late or down
+    // We check anything that hasn't pinged within its period
+    const actionableMonitors = await db
       .select()
       .from(heartbeatMonitors)
       .where(
         and(
           eq(heartbeatMonitors.paused, false),
           or(
-            // If never pinged and created more than period+grace ago
-            and(
-              isNull(heartbeatMonitors.lastPingAt),
-              sql`${heartbeatMonitors.createdAt} <= ${now} - ((${heartbeatMonitors.periodMinutes} + ${heartbeatMonitors.graceMinutes}) * interval '1 minute')`
-            ),
-            // If pinged before but overdue now
-            sql`${heartbeatMonitors.lastPingAt} <= ${now} - ((${heartbeatMonitors.periodMinutes} + ${heartbeatMonitors.graceMinutes}) * interval '1 minute')`
+            isNull(heartbeatMonitors.lastPingAt),
+            sql`${heartbeatMonitors.lastPingAt} <= (now()::timestamp - (${heartbeatMonitors.periodMinutes} * interval '1 minute'))`
           )
         )
       );
 
-    console.log(`[Heartbeat] Found ${overdueMonitors.length} overdue heartbeats.`);
+    console.log(`[Heartbeat] Found ${actionableMonitors.length} actionable heartbeats.`);
 
-    for (const monitor of overdueMonitors) {
-      if (monitor.status === "up" || monitor.status === "pending") {
-        await handleHeartbeatTimeout(monitor);
+    for (const monitor of actionableMonitors) {
+      const lastPingOrCreated = monitor.lastPingAt ? new Date(monitor.lastPingAt) : new Date(monitor.createdAt);
+      const diffMs = now.getTime() - lastPingOrCreated.getTime();
+      const periodMs = monitor.periodMinutes * 60 * 1000;
+      const graceMs = monitor.graceMinutes * 60 * 1000;
+
+      let newStatus: "up" | "late" | "down" = monitor.status;
+
+      if (diffMs >= (periodMs + graceMs)) {
+        newStatus = "down";
+      } else if (diffMs >= periodMs) {
+        newStatus = "late";
+      } else {
+        newStatus = "up";
+      }
+
+      if (newStatus !== monitor.status) {
+        console.log(`[Heartbeat] Status change for ${monitor.name}: ${monitor.status} -> ${newStatus}`);
+        
+        await db
+          .update(heartbeatMonitors)
+          .set({ status: newStatus })
+          .where(eq(heartbeatMonitors.id, monitor.id));
+
+        // Alert only on DOWN
+        if (newStatus === "down") {
+          await dispatchAlerts(null, monitor.id, "down");
+        } else if (newStatus === "late" && monitor.status !== "down") {
+          // Optional: alert on late
+          await dispatchAlerts(null, monitor.id, "late");
+        }
       }
     }
   } catch (error) {
     console.error("[Heartbeat] Error in heartbeat check:", error);
-  }
-}
-
-async function handleHeartbeatTimeout(monitor: any) {
-  const newStatus = "down"; // Or "late" if we want to distinguish
-
-  console.log(`[Heartbeat] Timeout for ${monitor.name}. Changing status to ${newStatus}`);
-
-  try {
-    await db.transaction(async (tx) => {
-      await tx
-        .update(heartbeatMonitors)
-        .set({
-          status: newStatus,
-        })
-        .where(eq(heartbeatMonitors.id, monitor.id));
-
-      // Trigger alert
-      await triggerAlert(monitor, newStatus);
-    });
-  } catch (error) {
-    console.error(`[Heartbeat] Failed to update heartbeat ${monitor.id}:`, error);
-  }
-}
-
-async function triggerAlert(monitor: any, status: string) {
-  const apiUrl = process.env.WEB_API_URL || "http://localhost:3000";
-
-  try {
-    await axios.post(`${apiUrl}/api/internal/alert`, {
-      heartbeatId: monitor.id,
-      status,
-    }, {
-      headers: {
-        "x-internal-secret": process.env.INTERNAL_API_SECRET,
-      }
-    });
-  } catch (error) {
-    console.error(`[Heartbeat Alert] Failed to trigger internal alert for ${monitor.id}:`, error);
   }
 }

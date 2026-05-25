@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS "monitors_paused_last_checked_idx" ON "monitors" ("paused","last_checked_at");
