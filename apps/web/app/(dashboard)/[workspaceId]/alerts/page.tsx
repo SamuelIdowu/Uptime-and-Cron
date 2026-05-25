@@ -33,12 +33,16 @@ export default async function AlertsPage({
   });
 
   const formattedAlerts = userAlerts.map(a => ({
-    id: a.id.slice(0, 8).toUpperCase(),
-    monitor: a.monitor?.name || a.heartbeat?.name || "Unknown",
+    id: a.id,
+    displayId: a.id.slice(0, 8).toUpperCase(),
+    monitorName: a.monitor?.name || a.heartbeat?.name || "Unknown",
     type: a.type.toUpperCase(),
     time: a.createdAt.toISOString(),
     channel: a.channel.charAt(0).toUpperCase() + a.channel.slice(1),
-    status: a.status
+    status: a.status,
+    sentAt: a.sentAt?.toISOString(),
+    error: a.error,
+    retryCount: a.retryCount
   }));
 
   return (

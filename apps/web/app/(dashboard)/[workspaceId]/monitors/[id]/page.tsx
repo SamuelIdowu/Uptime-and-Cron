@@ -8,9 +8,11 @@ import { Button } from "@/components/ui/button";
 import { StatusDot } from "@/components/status-dot";
 import { StatusBadge } from "@/components/status-badge";
 import { PingCalendar } from "@/components/ping-calendar";
+import { UptimeBar, DailyStatus } from "@/components/uptime-bar";
 import { ResponseTimeChart } from "@/components/response-time-chart";
 import { IncidentTable } from "@/components/incident-table";
-import { RegionalPerformance } from "@/components/regional-performance";
+import { RegionalPerformance, Region } from "@/components/regional-performance";
+import { MonitorPageActions } from "@/components/monitor-page-actions";
 import { formatDistanceToNow, subDays, startOfDay, endOfDay, isSameDay } from "date-fns";
 import { cn } from "@/lib/utils";
 
@@ -56,18 +58,24 @@ export default async function MonitorDetailPage({
 
   // --- Aggregation Logic (90 Days for PingCalendar) ---
   const dailyHistory: number[] = [];
+  const uptimeBarData: DailyStatus[] = [];
+
   for (let i = 89; i >= 0; i--) {
     const day = subDays(new Date(), i);
     const dayStart = startOfDay(day);
+    const dayEnd = endOfDay(day);
     
     // Check if we have a rollup for this day
     const rollup = rollups.find(r => isSameDay(new Date(r.date), day));
     
+    let status: number;
+    let barStatus: DailyStatus;
+
     if (rollup) {
-      dailyHistory.push(parseFloat(rollup.uptimePercentage) >= 100 ? 1 : rollup.failedChecks > 0 ? 0 : 1);
+      status = parseFloat(rollup.uptimePercentage) >= 100 ? 1 : rollup.failedChecks > 0 ? 0 : 1;
+      barStatus = parseFloat(rollup.uptimePercentage) >= 100 ? "up" : "down";
     } else {
       // Fallback for today or missing data: use live events
-      const dayEnd = endOfDay(day);
       const dayEvents = events.filter((e) => {
         const start = new Date(e.startedAt);
         const end = e.resolvedAt ? new Date(e.resolvedAt) : new Date();
@@ -79,14 +87,23 @@ export default async function MonitorDetailPage({
       });
 
       if (dayEvents.some((e) => e.status === "down")) {
-        dailyHistory.push(0);
+        status = 0;
+        barStatus = "down";
       } else if (monitor.paused && monitor.lastCheckedAt && new Date(monitor.lastCheckedAt) < dayStart) {
-        dailyHistory.push(0.5);
+        status = 0.5;
+        barStatus = "paused";
       } else if (new Date(monitor.createdAt) > dayEnd) {
-        dailyHistory.push(0.5); // Not created yet
+        status = 0; // Not created yet
+        barStatus = "no-data";
       } else {
-        dailyHistory.push(1);
+        status = 1;
+        barStatus = "up";
       }
+    }
+
+    dailyHistory.push(status);
+    if (i < 30) {
+      uptimeBarData.push(barStatus);
     }
   }
 
@@ -117,6 +134,15 @@ export default async function MonitorDetailPage({
 
   const currentStatus = monitor.paused ? "paused" : monitor.status;
 
+  const regions: Region[] = [
+    {
+      id: "us-east-1",
+      name: "Primary Node (US-East)",
+      latency: monitor.avgResponseMs || 0,
+      status: currentStatus === "up" ? "up" : currentStatus === "paused" ? "up" : "down"
+    }
+  ];
+
   return (
     <main className="min-h-screen p-4 sm:p-8 bg-background">
       <div className="max-w-7xl mx-auto space-y-12">
@@ -129,14 +155,11 @@ export default async function MonitorDetailPage({
                 <span className="eyebrow text-[10px]">Back to Dashboard</span>
               </Button>
             </Link>
-            <div className="flex items-center gap-3">
-              <Button size="sm" variant="outline" className="transition-all uppercase eyebrow text-[10px]">
-                {monitor.paused ? "Resume Monitor" : "Pause Monitor"}
-              </Button>
-              <Button size="sm" className="transition-all uppercase eyebrow text-[10px]">
-                Edit Monitor
-              </Button>
-            </div>
+            <MonitorPageActions 
+              monitorId={monitor.id} 
+              workspaceId={workspaceId} 
+              isPaused={monitor.paused ?? false} 
+            />
           </div>
           
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-border/40 pb-8">
@@ -212,16 +235,19 @@ export default async function MonitorDetailPage({
                   <span className="eyebrow text-[9px] text-mute mb-1">Total</span>
                 </div>
               </div>
-              <div className="bg-card border border-border p-8 rounded-md overflow-x-auto">
-                <PingCalendar data={dailyHistory} />
-                <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-mute mt-6 opacity-60 font-mono">
-                    <span>90 days ago</span>
-                    <div className="flex gap-4">
-                      <div className="flex items-center gap-1"><div className="size-2 rounded-full bg-primary" /><span>Up</span></div>
-                      <div className="flex items-center gap-1"><div className="size-2 rounded-full bg-destructive" /><span>Down</span></div>
-                      <div className="flex items-center gap-1"><div className="size-2 rounded-full bg-border" /><span>No Data</span></div>
-                    </div>
-                    <span>Today</span>
+              <div className="bg-card border border-border p-8 rounded-md space-y-8 overflow-x-auto">
+                <UptimeBar data={uptimeBarData} />
+                <div>
+                  <PingCalendar data={dailyHistory} />
+                  <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-mute mt-6 opacity-60 font-mono">
+                      <span>90 days ago</span>
+                      <div className="flex gap-4">
+                        <div className="flex items-center gap-1"><div className="size-2 rounded-full bg-primary" /><span>Up</span></div>
+                        <div className="flex items-center gap-1"><div className="size-2 rounded-full bg-destructive" /><span>Down</span></div>
+                        <div className="flex items-center gap-1"><div className="size-2 rounded-full bg-border" /><span>No Data</span></div>
+                      </div>
+                      <span>Today</span>
+                  </div>
                 </div>
               </div>
             </section>
@@ -235,7 +261,7 @@ export default async function MonitorDetailPage({
                 Nodes
               </h2>
               <div className="bg-card border border-border rounded-md overflow-hidden">
-                <RegionalPerformance />
+                <RegionalPerformance regions={regions} />
               </div>
             </section>
 

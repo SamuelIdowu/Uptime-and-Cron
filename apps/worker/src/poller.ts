@@ -21,7 +21,7 @@ export async function runPoller() {
           eq(monitors.paused, false),
           or(
             isNull(monitors.lastCheckedAt),
-            sql`${monitors.lastCheckedAt} <= (now()::timestamp - (${monitors.intervalMinutes} * interval '1 minute'))`
+            sql`${monitors.lastCheckedAt} <= (now()::timestamp - (${monitors.intervalMinutes} * interval '1 minute') + interval '50 seconds')`
           )
         )
       );
@@ -64,6 +64,9 @@ async function checkMonitor(monitor: Monitor) {
         timeout: 10000, // 10s timeout
         validateStatus: () => true, // Don't throw on error codes
         httpsAgent: agent,
+        headers: {
+          'User-Agent': 'SteadyStateBot/1.0 (+https://steadystate.dev)',
+        }
       });
 
       const cert = response.request?.res?.socket?.getPeerCertificate?.();

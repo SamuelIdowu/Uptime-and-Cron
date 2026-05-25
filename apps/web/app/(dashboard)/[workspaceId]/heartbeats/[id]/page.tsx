@@ -9,6 +9,7 @@ import { StatusDot } from "@/components/status-dot";
 import { StatusBadge } from "@/components/status-badge";
 import { CopyField } from "@/components/copy-field";
 import { PingCalendar } from "@/components/ping-calendar";
+import { UptimeBar, DailyStatus } from "@/components/uptime-bar";
 import { PingTimingChart } from "@/components/ping-timing-chart";
 import { formatDistanceToNow, subDays, startOfDay, endOfDay, isSameDay } from "date-fns";
 import { HeartbeatPageActions } from "@/components/heartbeat-page-actions";
@@ -55,28 +56,43 @@ export default async function HeartbeatDetailPage({
 
   // Real aggregation for 90 days using rollups
   const dailyHistory: number[] = [];
+  const uptimeBarData: DailyStatus[] = [];
+
   for (let i = 89; i >= 0; i--) {
     const day = subDays(new Date(), i);
     const dayStart = startOfDay(day);
+    const dayEnd = endOfDay(day);
 
     const rollup = rollups.find(r => isSameDay(new Date(r.date), day));
     
+    let status: number;
+    let barStatus: DailyStatus;
+
     if (rollup) {
-      dailyHistory.push(parseFloat(rollup.uptimePercentage) >= 100 ? 1 : 0);
+      status = parseFloat(rollup.uptimePercentage) >= 100 ? 1 : 0;
+      barStatus = parseFloat(rollup.uptimePercentage) >= 100 ? "up" : "down";
     } else {
       // Fallback for today or missing data
-      const dayEnd = endOfDay(day);
       const dayPings = allPings.filter(p => p.receivedAt >= dayStart && p.receivedAt <= dayEnd);
       
       if (dayPings.length > 0) {
-        dailyHistory.push(1);
+        status = 1;
+        barStatus = "up";
       } else if (heartbeat.paused && heartbeat.lastPingAt && new Date(heartbeat.lastPingAt) < dayStart) {
-        dailyHistory.push(0.5);
+        status = 0.5;
+        barStatus = "paused";
       } else if (new Date(heartbeat.createdAt) > dayEnd) {
-        dailyHistory.push(0.5); // Not created yet
+        status = 0; // Not created yet
+        barStatus = "no-data";
       } else {
-        dailyHistory.push(0); // Missed day
+        status = 0; // Missed day
+        barStatus = "down";
       }
+    }
+
+    dailyHistory.push(status);
+    if (i < 30) {
+      uptimeBarData.push(barStatus);
     }
   }
 
@@ -192,16 +208,19 @@ export default async function HeartbeatDetailPage({
                   Reliability History
                 </h2>
               </div>
-              <div className="bg-card border border-border p-8 rounded-md overflow-x-auto">
-                <PingCalendar data={dailyHistory} />
-                <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-mute mt-6 opacity-60 font-mono">
-                    <span>90 days ago</span>
-                    <div className="flex gap-6">
-                      <div className="flex items-center gap-2"><div className="size-2 rounded-full bg-primary" /><span>OK</span></div>
-                      <div className="flex items-center gap-2"><div className="size-2 rounded-full bg-destructive" /><span>Missed</span></div>
-                      <div className="flex items-center gap-2"><div className="size-2 rounded-full bg-border" /><span>Pending</span></div>
-                    </div>
-                    <span>Today</span>
+              <div className="bg-card border border-border p-8 rounded-md space-y-8 overflow-x-auto">
+                <UptimeBar data={uptimeBarData} />
+                <div>
+                  <PingCalendar data={dailyHistory} />
+                  <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-mute mt-6 opacity-60 font-mono">
+                      <span>90 days ago</span>
+                      <div className="flex gap-6">
+                        <div className="flex items-center gap-2"><div className="size-2 rounded-full bg-primary" /><span>OK</span></div>
+                        <div className="flex items-center gap-2"><div className="size-2 rounded-full bg-destructive" /><span>Missed</span></div>
+                        <div className="flex items-center gap-2"><div className="size-2 rounded-full bg-border" /><span>Pending</span></div>
+                      </div>
+                      <span>Today</span>
+                  </div>
                 </div>
               </div>
             </section>

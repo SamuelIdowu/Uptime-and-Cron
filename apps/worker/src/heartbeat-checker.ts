@@ -16,7 +16,7 @@ export async function checkHeartbeats() {
           eq(heartbeatMonitors.paused, false),
           or(
             isNull(heartbeatMonitors.lastPingAt),
-            sql`${heartbeatMonitors.lastPingAt} <= (now()::timestamp - (${heartbeatMonitors.periodMinutes} * interval '1 minute'))`
+            sql`${heartbeatMonitors.lastPingAt} <= (now()::timestamp - (${heartbeatMonitors.periodMinutes} * interval '1 minute') + interval '50 seconds')`
           )
         )
       );

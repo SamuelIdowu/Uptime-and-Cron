@@ -1,5 +1,5 @@
 import { UserButton } from "@clerk/nextjs";
-import { auth } from "@clerk/nextjs/server";
+import { auth, currentUser } from "@clerk/nextjs/server";
 import { db, monitors, heartbeatMonitors, users, alertSettings, monitorEvents, heartbeatPings, monitorChecks } from "@steady-state/db";
 import { desc, eq } from "drizzle-orm";
 import { subDays } from "date-fns";
@@ -21,7 +21,32 @@ import { PLAN_LIMITS } from "@/lib/constants";
 
 import { CreateMonitorModal } from "@/components/create-monitor-modal";
 
-export default async function DashboardPage({
+async function syncUserRecord(userId: string) {
+  const clerkUser = await currentUser();
+  
+  if (!clerkUser) {
+    redirect("/sign-up");
+  }
+
+  const email = clerkUser.emailAddresses[0]?.emailAddress;
+  
+  // Create user and default alert settings sequentially
+  const newUser = await db.insert(users).values({
+    id: userId,
+    email: email || "unknown@example.com",
+    plan: "free",
+  }).returning();
+  
+  await db.insert(alertSettings).values({
+    userId: userId,
+    email: email || "unknown@example.com",
+  });
+  
+  console.log(`[Auto-Sync] Created local record for user: ${userId}`);
+  return newUser[0];
+}
+
+export default async function InfrastructureDashboard({
   params,
 }: {
   params: Promise<{ workspaceId: string }>;
@@ -46,54 +71,31 @@ export default async function DashboardPage({
 
   // --- Auto-Sync Hack for Development ---
   if (!user) {
-    const { currentUser } = await import("@clerk/nextjs/server");
-    const clerkUser = await currentUser();
-    
-    if (clerkUser) {
-      const email = clerkUser.emailAddresses[0]?.emailAddress;
-      
-      // Create user and default alert settings sequentially (neon-http does not support transactions)
-      const newUser = await db.insert(users).values({
-        id: userId,
-        email: email || "unknown@example.com",
-        plan: "free",
-      }).returning();
-      
-      user = newUser[0];
-
-      await db.insert(alertSettings).values({
-        userId: userId,
-        email: email || "unknown@example.com",
-      });
-      
-      console.log(`[Auto-Sync] Created local record for user: ${userId}`);
-    } else {
-      redirect("/sign-up");
-    }
+    user = await syncUserRecord(userId);
   }
 
-  const [userMonitors, userHeartbeats] = await Promise.all([
-    db.query.monitors.findMany({
-      where: eq(monitors.userId, userId),
-      orderBy: desc(monitors.createdAt),
-      with: {
-        checks: {
-          orderBy: desc(monitorChecks.createdAt),
-          limit: 20,
-        },
+  // Fetch monitors and heartbeats sequentially for debugging performance marks
+  const userMonitors = await db.query.monitors.findMany({
+    where: eq(monitors.userId, userId),
+    orderBy: desc(monitors.createdAt),
+    with: {
+      checks: {
+        orderBy: desc(monitorChecks.createdAt),
+        limit: 50,
       },
-    }),
-    db.query.heartbeatMonitors.findMany({
-      where: eq(heartbeatMonitors.userId, userId),
-      orderBy: desc(heartbeatMonitors.createdAt),
-      with: {
-        pings: {
-          orderBy: desc(heartbeatPings.receivedAt),
-          limit: 20,
-        },
+    },
+  });
+
+  const userHeartbeats = await db.query.heartbeatMonitors.findMany({
+    where: eq(heartbeatMonitors.userId, userId),
+    orderBy: desc(heartbeatMonitors.createdAt),
+    with: {
+      pings: {
+        orderBy: desc(heartbeatPings.receivedAt),
+        limit: 50,
       },
-    }),
-  ]);
+    },
+  });
 
   const unifiedMonitors = [
     ...userMonitors.map(m => ({ ...m, type: 'http' as const })),
@@ -106,9 +108,26 @@ export default async function DashboardPage({
       else if (m.status === "up") acc.up++;
       else if (m.status === "down" || m.status === "late") acc.down++;
       
-      if (m.type === 'http' && m.uptime30d) {
-        acc.totalUptime += parseFloat(m.uptime30d);
+      const uptime = (m as any).uptime30d;
+      if (uptime) {
+        acc.totalUptime += parseFloat(uptime);
         acc.uptimeCount++;
+      } else {
+        // Fallback for new monitors: calculate from recent checks/pings
+        if (m.type === 'http') {
+          const checks = (m as any).checks || [];
+          if (checks.length > 0) {
+            const upChecks = checks.filter((c: any) => c.status === 'up').length;
+            acc.totalUptime += (upChecks / checks.length) * 100;
+            acc.uptimeCount++;
+          }
+        } else {
+          const pings = (m as any).pings || [];
+          if (pings.length > 0) {
+            acc.totalUptime += 100; // If it has pings and is not down/late, it's 100% for now
+            acc.uptimeCount++;
+          }
+        }
       }
       return acc;
     },

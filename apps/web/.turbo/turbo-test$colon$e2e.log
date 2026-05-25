@@ -1,0 +1,10 @@
+
+> @steady-state/web@0.1.0 test:e2e C:\Users\USER\Desktop\saas projects\uptime_and_cron\apps\web
+> playwright test
+
+
+Running 2 tests using 2 workers
+
+[1A[2K[1/2] [chromium] › e2e\smoke.test.ts:3:5 › should load the sign-in page
+[1A[2K[2/2] [chromium] › e2e\smoke.test.ts:9:5 › should have metadata title
+[1A[2K  2 passed (10.1s)

@@ -125,6 +125,8 @@ export const heartbeatMonitors = pgTable(
     graceMinutes: integer("grace_minutes").notNull().default(5),
     status: heartbeatStatusEnum("status").notNull().default("pending"),
     lastPingAt: timestamp("last_ping_at"),
+    uptime7d: decimal("uptime_7d", { precision: 5, scale: 2 }),
+    uptime30d: decimal("uptime_30d", { precision: 5, scale: 2 }),
     paused: boolean("paused").notNull().default(false),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },

@@ -33,13 +33,21 @@ export function HeartbeatCard({ heartbeat, workspaceId }: HeartbeatCardProps) {
     e.stopPropagation();
     setIsLoading(true);
     try {
-      await fetch(`/api/heartbeats/${heartbeat.id}`, {
+      const res = await fetch(`/api/heartbeats/${heartbeat.id}`, {
         method: "PATCH",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ paused: !heartbeat.paused }),
       });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText || "Failed to toggle status");
+      }
+
       router.refresh();
     } catch (error) {
       console.error(error);
+      window.alert(error instanceof Error ? error.message : "An unexpected error occurred");
     } finally {
       setIsLoading(false);
     }
@@ -50,12 +58,20 @@ export function HeartbeatCard({ heartbeat, workspaceId }: HeartbeatCardProps) {
     if (!confirm("Are you sure you want to delete this heartbeat?")) return;
     setIsLoading(true);
     try {
-      await fetch(`/api/heartbeats/${heartbeat.id}`, {
+      const res = await fetch(`/api/heartbeats/${heartbeat.id}`, {
         method: "DELETE",
+        headers: { "Content-Type": "application/json" },
       });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText || "Failed to delete");
+      }
+
       router.refresh();
     } catch (error) {
       console.error(error);
+      window.alert(error instanceof Error ? error.message : "An unexpected error occurred");
     } finally {
       setIsLoading(false);
     }
@@ -125,7 +141,7 @@ export function HeartbeatCard({ heartbeat, workspaceId }: HeartbeatCardProps) {
                 <><Pause className="size-4 mr-2" /> Pause</>
               )}
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => router.push(`/${workspaceId}/heartbeats/${heartbeat.id}`)} className="text-foreground eyebrow text-[12px] hover:bg-accent focus:bg-accent cursor-pointer">
+            <DropdownMenuItem onClick={() => router.push(`/${workspaceId}/heartbeats/${heartbeat.id}/edit`)} className="text-foreground eyebrow text-[12px] hover:bg-accent focus:bg-accent cursor-pointer">
               <Edit2 className="size-4 mr-2" /> Edit
             </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-border" />

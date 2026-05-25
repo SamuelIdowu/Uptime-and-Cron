@@ -5,20 +5,20 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
-interface HeartbeatPageActionsProps {
-  heartbeatId: string;
+interface MonitorPageActionsProps {
+  monitorId: string;
   workspaceId: string;
   isPaused: boolean;
 }
 
-export function HeartbeatPageActions({ heartbeatId, workspaceId, isPaused }: HeartbeatPageActionsProps) {
+export function MonitorPageActions({ monitorId, workspaceId, isPaused }: MonitorPageActionsProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
   const onTogglePause = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/heartbeats/${heartbeatId}`, {
+      const res = await fetch(`/api/monitors/${monitorId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ paused: !isPaused }),
@@ -39,18 +39,20 @@ export function HeartbeatPageActions({ heartbeatId, workspaceId, isPaused }: Hea
   };
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-3">
       <Button 
         size="sm" 
         variant="outline" 
-        className="rounded-none border-border shadow-sm font-medium"
+        className="transition-all uppercase eyebrow text-[10px]"
         onClick={onTogglePause}
         disabled={isLoading}
       >
-        {isPaused ? "Resume" : "Pause"}
+        {isPaused ? "Resume Monitor" : "Pause Monitor"}
       </Button>
-      <Link href={`/${workspaceId}/heartbeats/${heartbeatId}/edit`}>
-        <Button size="sm" variant="outline" className="rounded-none border-border shadow-sm font-medium">Edit</Button>
+      <Link href={`/${workspaceId}/monitors/${monitorId}/edit`}>
+        <Button size="sm" className="transition-all uppercase eyebrow text-[10px]">
+          Edit Monitor
+        </Button>
       </Link>
     </div>
   );

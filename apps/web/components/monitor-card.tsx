@@ -40,13 +40,21 @@ export function MonitorCard({ monitor, workspaceId }: MonitorCardProps) {
     e.stopPropagation();
     setIsLoading(true);
     try {
-      await fetch(`/api/monitors/${monitor.id}`, {
+      const res = await fetch(`/api/monitors/${monitor.id}`, {
         method: "PATCH",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ paused: !monitor.paused }),
       });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText || "Failed to toggle monitor status");
+      }
+
       router.refresh();
     } catch (error) {
       console.error(error);
+      window.alert(error instanceof Error ? error.message : "An unexpected error occurred");
     } finally {
       setIsLoading(false);
     }
@@ -57,12 +65,20 @@ export function MonitorCard({ monitor, workspaceId }: MonitorCardProps) {
     if (!confirm("Are you sure you want to delete this monitor?")) return;
     setIsLoading(true);
     try {
-      await fetch(`/api/monitors/${monitor.id}`, {
+      const res = await fetch(`/api/monitors/${monitor.id}`, {
         method: "DELETE",
+        headers: { "Content-Type": "application/json" },
       });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText || "Failed to delete monitor");
+      }
+
       router.refresh();
     } catch (error) {
       console.error(error);
+      window.alert(error instanceof Error ? error.message : "An unexpected error occurred");
     } finally {
       setIsLoading(false);
     }
@@ -146,7 +162,7 @@ export function MonitorCard({ monitor, workspaceId }: MonitorCardProps) {
                 <><Pause className="size-4 mr-2" /> Pause</>
               )}
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => router.push(`/${workspaceId}/monitors/${monitor.id}`)} className="text-foreground eyebrow text-[12px] hover:bg-accent focus:bg-accent cursor-pointer">
+            <DropdownMenuItem onClick={() => router.push(`/${workspaceId}/monitors/${monitor.id}/edit`)} className="text-foreground eyebrow text-[12px] hover:bg-accent focus:bg-accent cursor-pointer">
               <Edit2 className="size-4 mr-2" /> Edit
             </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-border" />

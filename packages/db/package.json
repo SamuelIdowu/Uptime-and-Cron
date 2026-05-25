@@ -6,14 +6,17 @@
   "scripts": {
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "seed": "tsx seed.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.9.3",
+    "dotenv": "^16.4.5",
     "drizzle-orm": "^0.30.10"
   },
   "devDependencies": {
-    "dotenv": "^16.4.5",
-    "drizzle-kit": "^0.21.4"
+    "date-fns": "^4.2.1",
+    "drizzle-kit": "^0.21.4",
+    "tsx": "^4.10.1"
   }
 }

@@ -1,0 +1,14 @@
+
+> @steady-state/web@0.1.0 test:unit C:\Users\USER\Desktop\saas projects\uptime_and_cron\apps\web
+> vitest run
+
+[33mThe plugin "vite-tsconfig-paths" is detected. Vite now supports tsconfig paths resolution natively via the [1mresolve.tsconfigPaths[22m option. You can remove the plugin and set [1mresolve.tsconfigPaths: true[22m in your Vite config instead.[39m
+
+ RUN  v4.1.7 C:/Users/USER/Desktop/saas projects/uptime_and_cron/apps/web
+
+
+ Test Files  1 passed (1)
+      Tests  4 passed (4)
+   Start at  22:48:43
+   Duration  8.22s (transform 383ms, setup 423ms, import 1.83s, tests 182ms, environment 4.83s)
+

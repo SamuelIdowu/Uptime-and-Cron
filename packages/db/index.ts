@@ -2,12 +2,38 @@ import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
 import { eq } from "drizzle-orm";
 import * as schema from "./schema";
+import { existsSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { config as loadEnv } from "dotenv";
 
-if (!process.env.DATABASE_URL) {
+const configDir = dirname(fileURLToPath(import.meta.url));
+const repoRoot = resolve(configDir, "../..");
+
+const envCandidates = [
+  join(configDir, ".env.local"),
+  join(configDir, ".env"),
+  join(repoRoot, ".env.local"),
+  join(repoRoot, ".env"),
+  join(repoRoot, "apps/web/.env.local"),
+  join(repoRoot, "apps/web/.env"),
+  join(repoRoot, "apps/worker/.env.local"),
+  join(repoRoot, "apps/worker/.env"),
+];
+
+for (const envPath of envCandidates) {
+  if (existsSync(envPath)) {
+    loadEnv({ path: envPath, override: false });
+  }
+}
+
+const databaseUrl = process.env.DATABASE_URL;
+
+if (!databaseUrl && process.env.NODE_ENV === "production") {
   throw new Error("DATABASE_URL is not set");
 }
 
-const sql = neon(process.env.DATABASE_URL);
+const sql = neon(databaseUrl || "");
 export const db = drizzle(sql, { schema });
 
 export * from "./schema";

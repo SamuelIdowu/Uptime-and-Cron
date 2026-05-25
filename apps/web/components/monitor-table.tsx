@@ -38,13 +38,21 @@ export function MonitorTable({ monitors, workspaceId }: MonitorTableProps) {
     setIsLoading(monitor.id);
     const endpoint = monitor.type === 'http' ? 'monitors' : 'heartbeats';
     try {
-      await fetch(`/api/${endpoint}/${monitor.id}`, {
+      const res = await fetch(`/api/${endpoint}/${monitor.id}`, {
         method: "PATCH",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ paused: !monitor.paused }),
       });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText || "Failed to toggle status");
+      }
+
       router.refresh();
     } catch (error) {
       console.error(error);
+      window.alert(error instanceof Error ? error.message : "An unexpected error occurred");
     } finally {
       setIsLoading(null);
     }
@@ -55,13 +63,21 @@ export function MonitorTable({ monitors, workspaceId }: MonitorTableProps) {
     setIsLoading(monitorToDelete.id);
     const endpoint = monitorToDelete.type === 'http' ? 'monitors' : 'heartbeats';
     try {
-      await fetch(`/api/${endpoint}/${monitorToDelete.id}`, {
+      const res = await fetch(`/api/${endpoint}/${monitorToDelete.id}`, {
         method: "DELETE",
+        headers: { "Content-Type": "application/json" },
       });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText || "Failed to delete");
+      }
+
       router.refresh();
       setMonitorToDelete(null);
     } catch (error) {
       console.error(error);
+      window.alert(error instanceof Error ? error.message : "An unexpected error occurred");
     } finally {
       setIsLoading(null);
     }
@@ -125,7 +141,7 @@ export function MonitorTable({ monitors, workspaceId }: MonitorTableProps) {
                       {isHttp ? (
                         <MiniSparkline status={monitor.status} data={sparklineData} />
                       ) : (
-                        <PingTimeline data={timelineData} maxItems={20} />
+                        <PingTimeline data={timelineData} maxItems={50} />
                       )}
                     </div>
                   </td>
@@ -133,13 +149,28 @@ export function MonitorTable({ monitors, workspaceId }: MonitorTableProps) {
                     <div className="flex flex-col gap-1.5">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-bold text-ink font-mono tracking-tighter">
-                          {isHttp ? `${(monitor as any).uptime7d || '100'}%` : 'ACTIVE'}
+                          {(() => {
+                            const uptime = (monitor as any).uptime7d;
+                            if (uptime) return `${uptime}%`;
+                            
+                            // Fallback calculation for new monitors
+                            if (isHttp) {
+                              const checks = (monitor as any).checks || [];
+                              if (checks.length === 0) return "100%";
+                              const upChecks = checks.filter((c: any) => c.status === 'up').length;
+                              return `${((upChecks / checks.length) * 100).toFixed(1)}%`;
+                            } else {
+                              const pings = (monitor as any).pings || [];
+                              if (pings.length === 0) return "---%";
+                              return monitor.status === 'up' ? "100%" : "0.0%";
+                            }
+                          })()}
                         </span>
                         <span className="eyebrow text-[9px] text-mute">UPTIME</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-[11px] font-medium text-mute font-mono">
-                          {isHttp ? `${(monitor as any).avgResponseMs || '0'}ms` : `${(monitor as any).periodMinutes}m INT.`}
+                          {isHttp ? `${(monitor as any).avgResponseMs || '---'}ms` : `${(monitor as any).periodMinutes}m INT.`}
                         </span>
                         <span className="eyebrow text-[9px] text-mute">{isHttp ? 'LATENCY' : 'SCHED'}</span>
                       </div>
@@ -165,7 +196,7 @@ export function MonitorTable({ monitors, workspaceId }: MonitorTableProps) {
                           )}
                         </DropdownMenuItem>
                         <DropdownMenuItem 
-                          onClick={() => router.push(`/${workspaceId}/${isHttp ? 'monitors' : 'heartbeats'}/${monitor.id}`)}
+                          onClick={() => router.push(`/${workspaceId}/${isHttp ? 'monitors' : 'heartbeats'}/${monitor.id}/edit`)}
                           className="flex items-center px-3 py-2 text-[11px] font-bold eyebrow cursor-pointer hover:bg-accent focus:bg-accent"
                         >
                           <Edit2 className="size-4 mr-2 text-mute" /> Edit

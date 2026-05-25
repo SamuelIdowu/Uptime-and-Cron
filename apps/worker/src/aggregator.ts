@@ -95,6 +95,31 @@ export async function runAggregator(dateOverride?: Date) {
           createdAt: new Date(),
         }
       });
+
+      // Update Heartbeat-level Cache
+      const last30Days = await db
+        .select()
+        .from(heartbeatDailyAggregates)
+        .where(
+          and(
+            eq(heartbeatDailyAggregates.heartbeatId, stat.heartbeatId),
+            gte(heartbeatDailyAggregates.date, subDays(new Date(), 30))
+          )
+        );
+
+      if (last30Days.length > 0) {
+        const uptime7d = last30Days
+          .filter(d => d.date >= subDays(new Date(), 7))
+          .reduce((acc, d) => acc + parseFloat(d.uptimePercentage), 0) / Math.min(last30Days.length, 7);
+        
+        const uptime30d = last30Days
+          .reduce((acc, d) => acc + parseFloat(d.uptimePercentage), 0) / last30Days.length;
+
+        await db.update(heartbeatMonitors).set({
+          uptime7d: uptime7d.toFixed(2),
+          uptime30d: uptime30d.toFixed(2),
+        }).where(eq(heartbeatMonitors.id, stat.heartbeatId));
+      }
     }
 
     console.log(`[Aggregator] Successfully processed rollups for ${httpStats.length} HTTP monitors and ${heartbeatStats.length} heartbeats.`);
