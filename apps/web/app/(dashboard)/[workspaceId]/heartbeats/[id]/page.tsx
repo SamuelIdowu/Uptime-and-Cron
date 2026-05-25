@@ -76,7 +76,7 @@ export default async function HeartbeatDetailPage({
     const dayStart = startOfDay(day);
     const dayEnd = endOfDay(day);
 
-    const rollup = rollups.find(r => isSameDay(new Date(r.date), day));
+    const rollup = rollups.find((r: any) => isSameDay(new Date(r.date), day));
     
     let status: number;
     let barStatus: DailyStatus;
@@ -86,7 +86,7 @@ export default async function HeartbeatDetailPage({
       barStatus = parseFloat(rollup.uptimePercentage) >= 100 ? "up" : "down";
     } else {
       // Fallback for today or missing data
-      const dayPings = allPings.filter(p => p.receivedAt >= dayStart && p.receivedAt <= dayEnd);
+      const dayPings = allPings.filter((p: any) => p.receivedAt >= dayStart && p.receivedAt <= dayEnd);
       
       if (dayPings.length > 0) {
         status = 1;
@@ -111,7 +111,7 @@ export default async function HeartbeatDetailPage({
 
   const pingTimingData = allPings
     .slice(0, 50)
-    .map((p, i, arr) => {
+    .map((p: any, i: number, arr: any[]) => {
       const prevPing = arr[i + 1];
       let delayMs = 0;
       if (prevPing) {
@@ -249,7 +249,7 @@ export default async function HeartbeatDetailPage({
               <div className="bg-card border border-border p-6 rounded-md space-y-6">
                 <div className="space-y-3">
                   <p className="eyebrow text-[10px] text-mute">Unique Endpoint</p>
-                  <CopyField value={pingUrl} />
+                  <CopyField value={pingUrl} token={heartbeat.pingToken} />
                 </div>
 
                 <IntegrationSnippet url={pingUrl} />
@@ -302,7 +302,7 @@ export default async function HeartbeatDetailPage({
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/40">
-                {allPings.slice(0, 20).map((ping) => (
+                {allPings.slice(0, 20).map((ping: any) => (
                   <tr key={ping.id} className="hover:bg-secondary/50 transition-colors cursor-pointer">
                     <td className="px-6 py-5 text-sm font-bold text-ink font-mono tracking-tight">
                       {new Date(ping.receivedAt).toLocaleString()}

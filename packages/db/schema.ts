@@ -46,6 +46,11 @@ export const alertStatusEnum = pgEnum("alert_status", [
   "dead",
 ]);
 export const eventStatusEnum = pgEnum("event_status", ["down", "up"]);
+export const healthThresholdEnum = pgEnum("health_threshold", [
+  "any",
+  "all",
+  "quorum",
+]);
 
 // Tables
 export const users = pgTable("users", {
@@ -57,6 +62,16 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+export const environments = pgTable("environments", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: varchar("user_id", { length: 255 })
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 255 }).notNull(),
+  baseUrl: varchar("base_url", { length: 2048 }).notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export const monitors = pgTable(
   "monitors",
   {
@@ -65,10 +80,11 @@ export const monitors = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     name: varchar("name", { length: 255 }).notNull(),
-    url: varchar("url", { length: 2048 }).notNull(),
+    url: varchar("url", { length: 2048 }),
     intervalMinutes: integer("interval_minutes").notNull().default(5),
     expectedStatus: integer("expected_status").notNull().default(200),
     status: monitorStatusEnum("status").notNull().default("pending"),
+    healthThreshold: healthThresholdEnum("health_threshold").notNull().default("any"),
     lastCheckedAt: timestamp("last_checked_at"),
     lastStatusChangeAt: timestamp("last_status_change_at"),
     uptime7d: decimal("uptime_7d", { precision: 5, scale: 2 }),
@@ -90,6 +106,15 @@ export const monitors = pgTable(
     ),
   })
 );
+
+export const monitorTargets = pgTable("monitor_targets", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  monitorId: uuid("monitor_id")
+    .notNull()
+    .references(() => monitors.id, { onDelete: "cascade" }),
+  url: varchar("url", { length: 2048 }).notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
 
 export const monitorEvents = pgTable(
   "monitor_events",
@@ -280,9 +305,17 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   monitors: many(monitors),
   heartbeatMonitors: many(heartbeatMonitors),
   alerts: many(alerts),
+  environments: many(environments),
   alertSettings: one(alertSettings, {
     fields: [users.id],
     references: [alertSettings.userId],
+  }),
+}));
+
+export const environmentsRelations = relations(environments, ({ one }) => ({
+  user: one(users, {
+    fields: [environments.userId],
+    references: [users.id],
   }),
 }));
 
@@ -295,6 +328,14 @@ export const monitorsRelations = relations(monitors, ({ one, many }) => ({
   checks: many(monitorChecks),
   dailyAggregates: many(monitorDailyAggregates),
   alerts: many(alerts),
+  targets: many(monitorTargets),
+}));
+
+export const monitorTargetsRelations = relations(monitorTargets, ({ one }) => ({
+  monitor: one(monitors, {
+    fields: [monitorTargets.monitorId],
+    references: [monitors.id],
+  }),
 }));
 
 export const monitorDailyAggregatesRelations = relations(monitorDailyAggregates, ({ one }) => ({
@@ -375,4 +416,6 @@ export type HeartbeatMonitor = typeof heartbeatMonitors.$inferSelect;
 export type HeartbeatPing = typeof heartbeatPings.$inferSelect;
 export type Alert = typeof alerts.$inferSelect;
 export type AlertSettings = typeof alertSettings.$inferSelect;
+export type Environment = typeof environments.$inferSelect;
+export type MonitorTarget = typeof monitorTargets.$inferSelect;
 

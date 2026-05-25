@@ -32,7 +32,7 @@ export default async function AlertsPage({
     limit: 50,
   });
 
-  const formattedAlerts = userAlerts.map(a => ({
+  const formattedAlerts = userAlerts.map((a: any) => ({
     id: a.id,
     displayId: a.id.slice(0, 8).toUpperCase(),
     monitorName: a.monitor?.name || a.heartbeat?.name || "Unknown",

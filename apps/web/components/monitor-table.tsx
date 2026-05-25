@@ -36,9 +36,12 @@ export function MonitorTable({ monitors, workspaceId, baseUrl }: MonitorTablePro
 
   const onCopyPingUrl = (e: React.MouseEvent, token: string) => {
     e.stopPropagation();
-    const url = `${baseUrl || window.location.origin}/api/ping/${token}`;
+    const storageKey = `ss_env_${workspaceId}`;
+    const savedEnv = typeof window !== 'undefined' ? localStorage.getItem(storageKey) : null;
+    const url = savedEnv 
+      ? `${savedEnv}/api/ping/${token}`
+      : `${baseUrl || window.location.origin}/api/ping/${token}`;
     navigator.clipboard.writeText(url);
-    // Optional: add toast notification here
   };
 
   const onTogglePause = async (e: React.MouseEvent, monitor: UnifiedMonitor) => {

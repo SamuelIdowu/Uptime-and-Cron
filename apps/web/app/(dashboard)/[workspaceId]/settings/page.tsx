@@ -2,9 +2,10 @@ import { auth } from "@clerk/nextjs/server";
 import { db, alertSettings, users, monitors } from "@steady-state/db";
 import { eq, sql } from "drizzle-orm";
 import { redirect } from "next/navigation";
-import { Activity, Bell, Mail, Slack, CreditCard, ShieldAlert, Globe } from "lucide-react";
+import { Activity, Bell, Mail, Slack, CreditCard, ShieldAlert, Globe, Layers } from "lucide-react";
 import { AlertChannelForm } from "./alert-channel-form";
 import { AppUrlForm } from "./app-url-form";
+import { EnvironmentForm } from "./environment-form";
 import { Button } from "@/components/ui/button";
 import { PLAN_LIMITS } from "@/lib/constants";
 
@@ -34,7 +35,7 @@ export default async function SettingsPage({
     .select({ count: sql<number>`count(*)` })
     .from(monitors)
     .where(eq(monitors.userId, userId))
-    .then(res => res[0].count);
+    .then((res: any) => res[0].count);
 
   const limits = PLAN_LIMITS[user?.plan as keyof typeof PLAN_LIMITS] || PLAN_LIMITS.free;
   const usagePercent = Math.min(100, (monitorCount / limits.maxMonitors) * 100);

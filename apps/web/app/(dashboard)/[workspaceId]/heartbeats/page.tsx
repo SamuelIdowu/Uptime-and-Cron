@@ -36,7 +36,7 @@ export default async function HeartbeatsPage({
     },
   });
 
-  const unifiedMonitors = userHeartbeats.map(h => ({ ...h, type: 'heartbeat' as const }));
+  const unifiedMonitors = userHeartbeats.map((h: any) => ({ ...h, type: 'heartbeat' as const }));
 
   return (
     <main className="min-h-screen p-3 sm:p-6">

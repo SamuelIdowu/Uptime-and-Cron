@@ -104,12 +104,12 @@ export default async function InfrastructureDashboard({
   });
 
   const unifiedMonitors = [
-    ...userMonitors.map(m => ({ ...m, type: 'http' as const })),
-    ...userHeartbeats.map(h => ({ ...h, type: 'heartbeat' as const }))
-  ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    ...userMonitors.map((m: any) => ({ ...m, type: 'http' as const })),
+    ...userHeartbeats.map((h: any) => ({ ...h, type: 'heartbeat' as const }))
+  ].sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   const stats = unifiedMonitors.reduce(
-    (acc, m) => {
+    (acc: any, m: any) => {
       if (m.paused) acc.paused++;
       else if (m.status === "up") acc.up++;
       else if (m.status === "down" || m.status === "late") acc.down++;
@@ -146,7 +146,7 @@ export default async function InfrastructureDashboard({
 
   // Calculate Growth (last 30 days)
   const thirtyDaysAgo = subDays(new Date(), 30);
-  const previousMonitorsCount = unifiedMonitors.filter(m => new Date(m.createdAt) < thirtyDaysAgo).length;
+  const previousMonitorsCount = unifiedMonitors.filter((m: any) => new Date(m.createdAt) < thirtyDaysAgo).length;
   const growth = previousMonitorsCount > 0 
     ? (((unifiedMonitors.length - previousMonitorsCount) / previousMonitorsCount) * 100).toFixed(1)
     : "0.0";

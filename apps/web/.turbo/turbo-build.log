@@ -3,101 +3,77 @@
 > next build
 
 ▲ Next.js 16.2.6 (Turbopack)
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
 - Environments: .env
 
-⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
   Creating an optimized production build ...
+Turbopack build encountered 1 warnings:
+./apps/web/next.config.mjs
+Encountered unexpected file in NFT list
+A file was traced that indicates that the whole project was traced unintentionally. Somewhere in the import trace below, there are:
+- filesystem operations (like path.join, path.resolve or fs.readFile), or
+- very dynamic requires (like require('./' + foo)).
+To resolve this, you can
+- remove them if possible, or
+- only use them in development, or
+- make sure they are statically scoped to some subfolder: path.join(process.cwd(), 'data', bar), or
+- add ignore comments: path.join(/*turbopackIgnore: true*/ process.cwd(), bar)
 
-> Build error occurred
-Error: Turbopack build failed with 5 errors:
-./apps/web/app/api/internal/alert/route.ts:4:1
-Module not found: Can't resolve '@/lib/resend'
-  [90m2 |[0m [36mimport[0m { db, monitors, heartbeatMonitors, alertSettings, alerts } [36mfrom[0m [32m"@steady-state/db"[0m;
-  [90m3 |[0m [36mimport[0m { eq } [36mfrom[0m [32m"drizzle-orm"[0m;
-[31m[1m>[0m [90m4 |[0m [36mimport[0m { sendAlertEmail } [36mfrom[0m [32m"@/lib/resend"[0m;
-  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
-  [90m5 |[0m [36mimport[0m { sendSlackAlert } [36mfrom[0m [32m"@/lib/slack"[0m;
-  [90m6 |[0m [36mimport[0m { sendTelegramAlert } [36mfrom[0m [32m"@/lib/telegram"[0m;
-  [90m7 |[0m
-
-Import map: aliased to relative './lib/resend' inside of [project]/apps/web
-
-
-https://nextjs.org/docs/messages/module-not-found
-
-
-./apps/web/app/api/internal/alert/route.ts:5:1
-Module not found: Can't resolve '@/lib/slack'
-  [90m3 |[0m [36mimport[0m { eq } [36mfrom[0m [32m"drizzle-orm"[0m;
-  [90m4 |[0m [36mimport[0m { sendAlertEmail } [36mfrom[0m [32m"@/lib/resend"[0m;
-[31m[1m>[0m [90m5 |[0m [36mimport[0m { sendSlackAlert } [36mfrom[0m [32m"@/lib/slack"[0m;
-  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
-  [90m6 |[0m [36mimport[0m { sendTelegramAlert } [36mfrom[0m [32m"@/lib/telegram"[0m;
-  [90m7 |[0m
-  [90m8 |[0m [36mexport[0m [36masync[0m [36mfunction[0m [33mPOST[0m(req: [33mRequest[0m) {
-
-Import map: aliased to relative './lib/slack' inside of [project]/apps/web
+Import trace:
+  App Route:
+    ./apps/web/next.config.mjs
+    ./packages/db/index.ts
+    ./apps/web/app/api/monitors/route.ts
 
 
-https://nextjs.org/docs/messages/module-not-found
+✓ Compiled successfully in 23.1s
+  Running TypeScript ...
+  Finished TypeScript in 15.0s ...
+  Collecting page data using 3 workers ...
+  Generating static pages using 3 workers (0/11) ...
+  Generating static pages using 3 workers (2/11) 
+  Generating static pages using 3 workers (5/11) 
+  Generating static pages using 3 workers (8/11) 
+✓ Generating static pages using 3 workers (11/11) in 792ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ƒ /
+├ ○ /_not-found
+├ ƒ /[workspaceId]/alerts
+├ ƒ /[workspaceId]/dashboard
+├ ƒ /[workspaceId]/heartbeats
+├ ƒ /[workspaceId]/heartbeats/[id]
+├ ƒ /[workspaceId]/heartbeats/[id]/edit
+├ ƒ /[workspaceId]/heartbeats/new
+├ ƒ /[workspaceId]/incidents
+├ ƒ /[workspaceId]/integrations
+├ ƒ /[workspaceId]/maintenance
+├ ƒ /[workspaceId]/monitors
+├ ƒ /[workspaceId]/monitors/[id]
+├ ƒ /[workspaceId]/monitors/[id]/edit
+├ ƒ /[workspaceId]/monitors/new
+├ ƒ /[workspaceId]/settings
+├ ƒ /[workspaceId]/status-pages
+├ ƒ /[workspaceId]/team
+├ ƒ /api/environments
+├ ƒ /api/environments/[id]
+├ ƒ /api/heartbeats
+├ ƒ /api/heartbeats/[id]
+├ ƒ /api/monitors
+├ ƒ /api/monitors/[id]
+├ ƒ /api/ping/[token]
+├ ƒ /api/settings
+├ ƒ /api/settings/slack/test
+├ ƒ /api/settings/telegram/test
+├ ƒ /api/webhooks/clerk
+├ ƒ /dashboard
+├ ƒ /sign-in/[[...sign-in]]
+└ ƒ /sign-up/[[...sign-up]]
 
 
-./apps/web/app/api/settings/slack/test/route.ts:3:1
-Module not found: Can't resolve '@/lib/slack'
-  [90m1 |[0m [36mimport[0m { auth } [36mfrom[0m [32m"@clerk/nextjs/server"[0m;
-  [90m2 |[0m [36mimport[0m { [33mNextResponse[0m } [36mfrom[0m [32m"next/server"[0m;
-[31m[1m>[0m [90m3 |[0m [36mimport[0m { sendSlackAlert } [36mfrom[0m [32m"@/lib/slack"[0m;
-  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
-  [90m4 |[0m
-  [90m5 |[0m [36mexport[0m [36masync[0m [36mfunction[0m [33mPOST[0m(req: [33mRequest[0m) {
-  [90m6 |[0m   [36mconst[0m { userId } = [36mawait[0m auth();
+ƒ Proxy (Middleware)
 
-Import map: aliased to relative './lib/slack' inside of [project]/apps/web
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
 
-
-https://nextjs.org/docs/messages/module-not-found
-
-
-./apps/web/app/api/internal/alert/route.ts:6:1
-Module not found: Can't resolve '@/lib/telegram'
-  [90m4 |[0m [36mimport[0m { sendAlertEmail } [36mfrom[0m [32m"@/lib/resend"[0m;
-  [90m5 |[0m [36mimport[0m { sendSlackAlert } [36mfrom[0m [32m"@/lib/slack"[0m;
-[31m[1m>[0m [90m6 |[0m [36mimport[0m { sendTelegramAlert } [36mfrom[0m [32m"@/lib/telegram"[0m;
-  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
-  [90m7 |[0m
-  [90m8 |[0m [36mexport[0m [36masync[0m [36mfunction[0m [33mPOST[0m(req: [33mRequest[0m) {
-  [90m9 |[0m   [36mconst[0m secret = req.headers.get([32m"x-internal-secret"[0m);
-
-Import map: aliased to relative './lib/telegram' inside of [project]/apps/web
-
-
-https://nextjs.org/docs/messages/module-not-found
-
-
-./apps/web/app/api/settings/telegram/test/route.ts:3:1
-Module not found: Can't resolve '@/lib/telegram'
-  [90m1 |[0m [36mimport[0m { auth } [36mfrom[0m [32m"@clerk/nextjs/server"[0m;
-  [90m2 |[0m [36mimport[0m { [33mNextResponse[0m } [36mfrom[0m [32m"next/server"[0m;
-[31m[1m>[0m [90m3 |[0m [36mimport[0m { sendTelegramAlert } [36mfrom[0m [32m"@/lib/telegram"[0m;
-  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
-  [90m4 |[0m
-  [90m5 |[0m [36mexport[0m [36masync[0m [36mfunction[0m [33mPOST[0m(req: [33mRequest[0m) {
-  [90m6 |[0m   [36mconst[0m { userId } = [36mawait[0m auth();
-
-Import map: aliased to relative './lib/telegram' inside of [project]/apps/web
-
-
-https://nextjs.org/docs/messages/module-not-found
-
-
-    at <unknown> (./apps/web/app/api/internal/alert/route.ts:4:1)
-    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
-    at <unknown> (./apps/web/app/api/internal/alert/route.ts:5:1)
-    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
-    at <unknown> (./apps/web/app/api/settings/slack/test/route.ts:3:1)
-    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
-    at <unknown> (./apps/web/app/api/internal/alert/route.ts:6:1)
-    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
-    at <unknown> (./apps/web/app/api/settings/telegram/test/route.ts:3:1)
-    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
- ELIFECYCLE  Command failed with exit code 1.

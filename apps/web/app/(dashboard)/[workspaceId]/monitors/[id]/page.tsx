@@ -66,7 +66,7 @@ export default async function MonitorDetailPage({
     const dayEnd = endOfDay(day);
     
     // Check if we have a rollup for this day
-    const rollup = rollups.find(r => isSameDay(new Date(r.date), day));
+    const rollup = rollups.find((r: any) => isSameDay(new Date(r.date), day));
     
     let status: number;
     let barStatus: DailyStatus;
@@ -76,7 +76,7 @@ export default async function MonitorDetailPage({
       barStatus = parseFloat(rollup.uptimePercentage) >= 100 ? "up" : "down";
     } else {
       // Fallback for today or missing data: use live events
-      const dayEvents = events.filter((e) => {
+      const dayEvents = events.filter((e: any) => {
         const start = new Date(e.startedAt);
         const end = e.resolvedAt ? new Date(e.resolvedAt) : new Date();
         return (
@@ -86,7 +86,7 @@ export default async function MonitorDetailPage({
         );
       });
 
-      if (dayEvents.some((e) => e.status === "down")) {
+      if (dayEvents.some((e: any) => e.status === "down")) {
         status = 0;
         barStatus = "down";
       } else if (monitor.paused && monitor.lastCheckedAt && new Date(monitor.lastCheckedAt) < dayStart) {
@@ -112,8 +112,8 @@ export default async function MonitorDetailPage({
     : "100.00";
 
   const responseTimeData = checks
-    .filter(c => c.responseMs !== null)
-    .map(c => ({
+    .filter((c: any) => c.responseMs !== null)
+    .map((c: any) => ({
       time: formatDistanceToNow(new Date(c.createdAt), { addSuffix: true }),
       value: c.responseMs || 0,
       isDown: c.status === "down"
@@ -121,8 +121,8 @@ export default async function MonitorDetailPage({
     .reverse();
 
   const incidents = events
-    .filter(e => e.status === "down")
-    .map(e => ({
+    .filter((e: any) => e.status === "down")
+    .map((e: any) => ({
       id: e.id.slice(0, 8).toUpperCase(),
       title: e.errorMessage || `Outage detected`,
       status: e.resolvedAt ? "resolved" : "investigating" as any,

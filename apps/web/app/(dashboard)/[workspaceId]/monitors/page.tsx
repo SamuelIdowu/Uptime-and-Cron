@@ -36,7 +36,7 @@ export default async function MonitorsPage({
     },
   });
 
-  const unifiedMonitors = userMonitors.map(m => ({ ...m, type: 'http' as const }));
+  const unifiedMonitors = userMonitors.map((m: any) => ({ ...m, type: 'http' as const }));
 
   return (
     <main className="min-h-screen p-3 sm:p-6">

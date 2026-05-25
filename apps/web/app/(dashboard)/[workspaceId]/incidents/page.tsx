@@ -23,7 +23,7 @@ export default async function IncidentsPage({
   }
 
   const userMonitors = await db.select({ id: monitors.id }).from(monitors).where(eq(monitors.userId, userId));
-  const monitorIds = userMonitors.map(m => m.id);
+  const monitorIds = userMonitors.map((m: any) => m.id);
 
   let incidents: any[] = [];
 
@@ -40,7 +40,7 @@ export default async function IncidentsPage({
       limit: 50
     });
 
-    incidents = events.map(e => ({
+    incidents = events.map((e: any) => ({
       id: e.id.slice(0, 8).toUpperCase(),
       title: e.errorMessage || `Outage detected on ${e.monitor.name}`,
       status: e.resolvedAt ? "resolved" : "investigating",
