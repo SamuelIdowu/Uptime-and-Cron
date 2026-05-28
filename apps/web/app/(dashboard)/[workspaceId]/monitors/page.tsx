@@ -33,6 +33,7 @@ export default async function MonitorsPage({
         orderBy: desc(monitorChecks.createdAt),
         limit: 20,
       },
+      targets: true,
     },
   });
 

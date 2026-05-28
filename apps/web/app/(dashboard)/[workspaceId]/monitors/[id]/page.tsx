@@ -2,7 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { db, monitors, monitorEvents, monitorChecks, monitorDailyAggregates } from "@steady-state/db";
 import { and, eq, desc, gte } from "drizzle-orm";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft, Activity, Globe, Zap, Clock, Terminal, AlertTriangle, Settings2, ShieldCheck, RefreshCw, BarChart3, Map } from "lucide-react";
+import { ArrowLeft, Activity, Globe, Zap, Clock, Terminal, AlertTriangle, Settings2, ShieldCheck, RefreshCw, BarChart3, Map, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { StatusDot } from "@/components/status-dot";
@@ -45,6 +45,7 @@ export default async function MonitorDetailPage({
         where: gte(monitorDailyAggregates.date, ninetyDaysAgo),
         orderBy: desc(monitorDailyAggregates.date),
       },
+      targets: true,
     },
   });
 
@@ -134,14 +135,21 @@ export default async function MonitorDetailPage({
 
   const currentStatus = monitor.paused ? "paused" : monitor.status;
 
-  const regions: Region[] = [
-    {
-      id: "us-east-1",
-      name: "Primary Node (US-East)",
-      latency: monitor.avgResponseMs || 0,
-      status: currentStatus === "up" ? "up" : currentStatus === "paused" ? "up" : "down"
-    }
-  ];
+  const regions: Region[] = monitor.targets && monitor.targets.length > 0
+    ? monitor.targets.map((t, idx) => ({
+        id: `node-${idx}`,
+        name: t.url,
+        latency: monitor.avgResponseMs || 0,
+        status: currentStatus === "up" ? "up" : currentStatus === "paused" ? "up" : "down"
+      }))
+    : [
+        {
+          id: "primary",
+          name: "Primary Node",
+          latency: monitor.avgResponseMs || 0,
+          status: currentStatus === "up" ? "up" : currentStatus === "paused" ? "up" : "down"
+        }
+      ];
 
   return (
     <main className="min-h-screen p-4 sm:p-8 bg-background">
@@ -177,8 +185,20 @@ export default async function MonitorDetailPage({
                   <h1 className="display-md text-inkStrong uppercase">{monitor.name}</h1>
                   <StatusBadge status={currentStatus} />
                 </div>
-                <div className="flex items-center gap-2 text-sm text-mute font-mono">
-                  <span className="px-2 py-0.5 rounded-sm bg-secondary border border-border">{monitor.url}</span>
+                <div className="flex flex-col gap-2">
+                  {monitor.targets && monitor.targets.length > 1 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {monitor.targets.map((t, idx) => (
+                        <span key={idx} className="px-2 py-0.5 rounded-sm bg-primary/5 border border-primary/10 text-[10px] text-primary font-mono truncate max-w-[200px]">
+                          {t.url}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 text-sm text-mute font-mono">
+                      <span className="px-2 py-0.5 rounded-sm bg-secondary border border-border">{monitor.url}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -285,6 +305,13 @@ export default async function MonitorDetailPage({
                     <span className="eyebrow text-[10px] text-mute">SSL Policy</span>
                   </div>
                   <span className="text-lg font-bold text-inkStrong font-mono uppercase">{monitor.sslPolicy}</span>
+                </div>
+                <div className="group p-5 bg-card border border-border rounded-md transition-all hover:border-primary">
+                  <div className="flex items-center justify-between mb-3">
+                    <CheckCircle2 className="size-4 text-mute group-hover:text-primary transition-colors" />
+                    <span className="eyebrow text-[10px] text-mute">Consensus Logic</span>
+                  </div>
+                  <span className="text-lg font-bold text-inkStrong font-mono uppercase">{monitor.healthThreshold}</span>
                 </div>
                 <div className="group p-5 bg-card border border-border rounded-md transition-all hover:border-primary">
                   <div className="flex items-center justify-between mb-3">

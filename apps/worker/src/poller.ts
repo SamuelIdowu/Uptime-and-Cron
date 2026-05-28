@@ -6,30 +6,31 @@ import https from "https";
 import { JSONPath } from 'jsonpath-plus';
 
 const limit = pLimit(50); // Increased concurrency for IO-bound tasks
+const targetLimit = pLimit(10); // Concurrency for individual targets
 
 export async function runPoller() {
   const now = new Date();
   console.log(`[Poller] Starting check at ${now.toISOString()}`);
 
   try {
-    // 1. Fetch due monitors
-    const dueMonitors = await db
-      .select()
-      .from(monitors)
-      .where(
-        and(
-          eq(monitors.paused, false),
-          or(
-            isNull(monitors.lastCheckedAt),
-            sql`${monitors.lastCheckedAt} <= (now()::timestamp - (${monitors.intervalMinutes} * interval '1 minute') + interval '50 seconds')`
-          )
+    // 1. Fetch due monitors with targets
+    const dueMonitors = await db.query.monitors.findMany({
+      where: and(
+        eq(monitors.paused, false),
+        or(
+          isNull(monitors.lastCheckedAt),
+          sql`${monitors.lastCheckedAt} <= (now()::timestamp - (${monitors.intervalMinutes} * interval '1 minute') + interval '50 seconds')`
         )
-      );
+      ),
+      with: {
+        targets: true,
+      },
+    });
 
     console.log(`[Poller] Found ${dueMonitors.length} monitors to check.`);
 
     const tasks = dueMonitors.map((monitor) =>
-      limit(() => checkMonitor(monitor))
+      limit(() => checkMonitor(monitor as any))
     );
 
     await Promise.all(tasks);
@@ -40,104 +41,157 @@ export async function runPoller() {
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-async function checkMonitor(monitor: Monitor) {
+async function performCheckOnTarget(url: string, monitor: Monitor) {
+  const start = Date.now();
+  let currentStatus: "up" | "down" = "up";
+  let httpStatus: number | null = null;
+  let responseMs: number | null = null;
+  let errorMessage: string | null = null;
+  let sslExpiryAt: Date | null = null;
+
+  try {
+    const agent = new https.Agent({
+      rejectUnauthorized: monitor.sslPolicy === "strict" || monitor.sslPolicy === "standard",
+    });
+
+    const response = await axios.get(url, {
+      timeout: 10000, // 10s timeout
+      validateStatus: () => true, // Don't throw on error codes
+      httpsAgent: agent,
+      headers: {
+        'User-Agent': 'SteadyStateBot/1.0 (+https://steadystate.dev)',
+      }
+    });
+
+    const cert = response.request?.res?.socket?.getPeerCertificate?.();
+    if (cert && cert.valid_to) {
+      sslExpiryAt = new Date(cert.valid_to);
+    }
+
+    httpStatus = response.status;
+    responseMs = Date.now() - start;
+
+    if (httpStatus !== monitor.expectedStatus) {
+      currentStatus = "down";
+      errorMessage = `Expected status ${monitor.expectedStatus}, got ${httpStatus}`;
+    }
+
+    // SSL Expiry Check (within 7 days)
+    if (currentStatus === "up" && sslExpiryAt) {
+      const daysUntilExpiry = Math.ceil((sslExpiryAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+      if (daysUntilExpiry <= 7) {
+        currentStatus = "down";
+        errorMessage = `SSL Certificate expiring in ${daysUntilExpiry} days (${sslExpiryAt.toDateString()})`;
+      }
+    }
+
+    // Check Assertions
+    if (currentStatus === "up" && monitor.assertions) {
+      try {
+        const assertions = JSON.parse(monitor.assertions);
+        const bodyStr = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
+        const bodyJson = typeof response.data === 'object' ? response.data : null;
+
+        if (assertions.contains && !bodyStr.includes(assertions.contains)) {
+          currentStatus = "down";
+          errorMessage = `Response body did not contain: ${assertions.contains}`;
+        }
+
+        if (currentStatus === "up" && assertions.regex) {
+          const re = new RegExp(assertions.regex);
+          if (!re.test(bodyStr)) {
+            currentStatus = "down";
+            errorMessage = `Response body failed regex match: ${assertions.regex}`;
+          }
+        }
+
+        if (currentStatus === "up" && assertions.jsonPath && bodyJson) {
+          const result = JSONPath({ path: assertions.jsonPath, json: bodyJson });
+          if (!result || result.length === 0) {
+            currentStatus = "down";
+            errorMessage = `JSON Path query failed: ${assertions.jsonPath}`;
+          } else if (assertions.jsonPathValue !== undefined) {
+            const value = Array.isArray(result) ? result[0] : result;
+            if (value != assertions.jsonPathValue) {
+              currentStatus = "down";
+              errorMessage = `JSON Path value mismatch. Expected ${assertions.jsonPathValue}, got ${value}`;
+            }
+          }
+        }
+      } catch (e: any) {
+         console.warn(`[Poller] Assertion error for target ${url} on ${monitor.name}:`, e.message);
+      }
+    }
+  } catch (error: any) {
+    currentStatus = "down";
+    errorMessage = error.message || "Unknown error";
+    responseMs = Date.now() - start;
+  }
+
+  return { url, currentStatus, httpStatus, responseMs, errorMessage, sslExpiryAt };
+}
+
+async function checkMonitor(monitor: Monitor & { targets?: { url: string }[] }) {
   let attempts = 0;
   const maxAttempts = (monitor.autoRetry ?? 0) + 1;
   
-  let lastResult: any = null;
+  const targetUrls = monitor.targets && monitor.targets.length > 0
+    ? monitor.targets.map(t => t.url)
+    : (monitor.url ? [monitor.url] : []);
+
+  if (targetUrls.length === 0) {
+    console.warn(`[Poller] Monitor ${monitor.name} (${monitor.id}) has no targets configured.`);
+    return;
+  }
+
+  let finalResult: any = null;
 
   while (attempts < maxAttempts) {
     attempts++;
-    const start = Date.now();
-    let currentStatus: "up" | "down" = "up";
-    let httpStatus: number | null = null;
-    let responseMs: number | null = null;
-    let errorMessage: string | null = null;
-    let sslExpiryAt: Date | null = null;
+    
+    // Concurrent check across all targets
+    const targetChecks = targetUrls.map(url => targetLimit(() => performCheckOnTarget(url, monitor)));
+    const results = await Promise.all(targetChecks);
 
-    try {
-      const agent = new https.Agent({
-        rejectUnauthorized: monitor.sslPolicy === "strict" || monitor.sslPolicy === "standard",
-      });
+    // Consensus Logic
+    const upTargets = results.filter(r => r.currentStatus === "up");
+    const downTargets = results.filter(r => r.currentStatus === "down");
+    
+    let consensusUp = false;
+    const threshold = monitor.healthThreshold || "any";
 
-      const response = await axios.get(monitor.url, {
-        timeout: 10000, // 10s timeout
-        validateStatus: () => true, // Don't throw on error codes
-        httpsAgent: agent,
-        headers: {
-          'User-Agent': 'SteadyStateBot/1.0 (+https://steadystate.dev)',
-        }
-      });
-
-      const cert = response.request?.res?.socket?.getPeerCertificate?.();
-      if (cert && cert.valid_to) {
-        sslExpiryAt = new Date(cert.valid_to);
-      }
-
-      httpStatus = response.status;
-      responseMs = Date.now() - start;
-
-      if (httpStatus !== monitor.expectedStatus) {
-        currentStatus = "down";
-        errorMessage = `Expected status ${monitor.expectedStatus}, got ${httpStatus}`;
-      }
-
-      // SSL Expiry Check (within 7 days)
-      if (currentStatus === "up" && sslExpiryAt) {
-        const daysUntilExpiry = Math.ceil((sslExpiryAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-        if (daysUntilExpiry <= 7) {
-          currentStatus = "down";
-          errorMessage = `SSL Certificate expiring in ${daysUntilExpiry} days (${sslExpiryAt.toDateString()})`;
-        }
-      }
-
-      // Check Assertions
-      if (currentStatus === "up" && monitor.assertions) {
-        try {
-          const assertions = JSON.parse(monitor.assertions);
-          const bodyStr = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
-          const bodyJson = typeof response.data === 'object' ? response.data : null;
-
-          if (assertions.contains && !bodyStr.includes(assertions.contains)) {
-            currentStatus = "down";
-            errorMessage = `Response body did not contain: ${assertions.contains}`;
-          }
-
-          if (currentStatus === "up" && assertions.regex) {
-            const re = new RegExp(assertions.regex);
-            if (!re.test(bodyStr)) {
-              currentStatus = "down";
-              errorMessage = `Response body failed regex match: ${assertions.regex}`;
-            }
-          }
-
-          if (currentStatus === "up" && assertions.jsonPath && bodyJson) {
-            const result = JSONPath({ path: assertions.jsonPath, json: bodyJson });
-            if (!result || result.length === 0) {
-              currentStatus = "down";
-              errorMessage = `JSON Path query failed: ${assertions.jsonPath}`;
-            } else if (assertions.jsonPathValue !== undefined) {
-              const value = Array.isArray(result) ? result[0] : result;
-              if (value != assertions.jsonPathValue) {
-                currentStatus = "down";
-                errorMessage = `JSON Path value mismatch. Expected ${assertions.jsonPathValue}, got ${value}`;
-              }
-            }
-          }
-        } catch (e: any) {
-           console.warn(`[Poller] Assertion error for ${monitor.name}:`, e.message);
-        }
-      }
-    } catch (error: any) {
-      currentStatus = "down";
-      errorMessage = error.message || "Unknown error";
-      responseMs = Date.now() - start;
+    if (threshold === "any") {
+      consensusUp = upTargets.length > 0;
+    } else if (threshold === "all") {
+      consensusUp = upTargets.length === results.length;
+    } else if (threshold === "quorum") {
+      consensusUp = upTargets.length > results.length / 2;
     }
 
-    lastResult = {
+    const currentStatus: "up" | "down" = consensusUp ? "up" : "down";
+
+    // Aggregated data
+    const healthyResults = upTargets.length > 0 ? upTargets : results;
+    const avgResponseMs = Math.round(healthyResults.reduce((acc, r) => acc + (r.responseMs || 0), 0) / healthyResults.length);
+    const primaryHttpStatus = results[0].httpStatus; // Use the first target's status as representative
+    
+    let errorMessage: string | null = null;
+    if (currentStatus === "down") {
+      errorMessage = downTargets.length > 0 
+        ? downTargets.map(t => `${t.url}: ${t.errorMessage}`).join(" | ")
+        : "Consensus threshold not met";
+    }
+
+    // Collect latest SSL expiry from any target that has it
+    const sslExpiryAt = results.reduce((latest, r) => {
+      if (r.sslExpiryAt && (!latest || r.sslExpiryAt < latest)) return r.sslExpiryAt;
+      return latest;
+    }, null as Date | null);
+
+    finalResult = {
       currentStatus,
-      httpStatus,
-      responseMs,
+      httpStatus: primaryHttpStatus,
+      responseMs: avgResponseMs,
       errorMessage,
       sslExpiryAt,
     };
@@ -152,14 +206,14 @@ async function checkMonitor(monitor: Monitor) {
     }
   }
 
-  const { currentStatus, httpStatus, responseMs, errorMessage, sslExpiryAt } = lastResult;
+  const { currentStatus, httpStatus, responseMs, errorMessage, sslExpiryAt } = finalResult;
   const statusChanged = monitor.status !== currentStatus;
   const newAvgMs = monitor.avgResponseMs && responseMs
     ? Math.round((monitor.avgResponseMs + responseMs) / 2)
     : responseMs;
 
   try {
-    // 1. Record every check result
+    // 1. Record aggregated check result
     await db.insert(monitorChecks).values({
       monitorId: monitor.id,
       status: currentStatus,
@@ -186,8 +240,6 @@ async function checkMonitor(monitor: Monitor) {
         `[Poller] Status changed for ${monitor.name}: ${monitor.status} -> ${currentStatus}`
       );
 
-      // Close previous event if it exists (if we want interval-based events)
-      // For now we just insert a new start event
       await db.insert(monitorEvents).values({
         monitorId: monitor.id,
         status: currentStatus,

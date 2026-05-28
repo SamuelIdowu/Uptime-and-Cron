@@ -24,7 +24,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 interface MonitorCardProps {
-  monitor: Monitor & { checks?: MonitorCheck[] };
+  monitor: Monitor & { checks?: MonitorCheck[]; targets?: { url: string }[] };
   workspaceId: string;
 }
 
@@ -96,9 +96,21 @@ export function MonitorCard({ monitor, workspaceId }: MonitorCardProps) {
       <StatusDot status={monitor.paused ? "paused" : monitor.status} size="md" className="border border-border" />
       
       <div className="flex flex-col flex-1 min-w-0 gap-1">
-        <h3 className="text-[20px] font-semibold tracking-tight text-foreground truncate">
-          {monitor.name}
-        </h3>
+        <div className="flex items-center gap-2">
+          <h3 className="text-[20px] font-semibold tracking-tight text-foreground truncate">
+            {monitor.name}
+          </h3>
+          {monitor.targets && monitor.targets.length > 1 && (
+            <div className="flex items-center gap-1">
+              <span className="px-1.5 py-0.5 bg-primary/10 border border-primary/20 text-primary text-[9px] font-bold rounded-sm uppercase tracking-tighter">
+                {monitor.targets.length} Nodes
+              </span>
+              <span className="px-1.5 py-0.5 bg-secondary border border-border text-mute text-[9px] font-bold rounded-sm uppercase tracking-tighter">
+                {monitor.healthThreshold}
+              </span>
+            </div>
+          )}
+        </div>
         <div className="flex items-center gap-2 text-sm text-muted-foreground font-mono">
           <span className="truncate max-w-[200px] sm:max-w-[300px]">
             {monitor.url}

@@ -89,6 +89,7 @@ export default async function InfrastructureDashboard({
         orderBy: desc(monitorChecks.createdAt),
         limit: 50,
       },
+      targets: true,
     },
   });
 

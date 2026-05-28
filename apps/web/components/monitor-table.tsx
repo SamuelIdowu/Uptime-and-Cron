@@ -141,6 +141,16 @@ export function MonitorTable({ monitors, workspaceId, baseUrl }: MonitorTablePro
                     <div className="flex flex-col min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
                         <span className="text-sm font-bold text-ink truncate tracking-tight">{monitor.name}</span>
+                        {isHttp && (monitor as any).targets && (monitor as any).targets.length > 1 && (
+                          <div className="flex items-center gap-1">
+                            <span className="px-1.5 py-0.5 bg-primary/10 border border-primary/20 text-primary text-[9px] font-bold rounded-sm uppercase tracking-tighter">
+                              {(monitor as any).targets.length} Nodes
+                            </span>
+                            <span className="px-1.5 py-0.5 bg-secondary border border-border text-mute text-[9px] font-bold rounded-sm uppercase tracking-tighter">
+                              {(monitor as any).healthThreshold}
+                            </span>
+                          </div>
+                        )}
                       </div>
                       <span className="text-xs text-mute font-mono truncate max-w-[240px]">
                         {isHttp ? (monitor as any).url : `TOKEN: ${(monitor as any).pingToken.slice(0, 12)}...`}
