@@ -1,5 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { db, alertSettings, users } from "@steady-state/db";
+import { encrypt, decrypt } from "@steady-state/notifications";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -31,6 +32,15 @@ export async function GET() {
       }
     });
 
+    if (settings) {
+      if (settings.slackWebhookUrl) {
+        settings.slackWebhookUrl = decrypt(settings.slackWebhookUrl) ?? settings.slackWebhookUrl;
+      }
+      if (settings.telegramBotToken) {
+        settings.telegramBotToken = decrypt(settings.telegramBotToken) ?? settings.telegramBotToken;
+      }
+    }
+
     return NextResponse.json({
       ...settings,
       appUrl: user?.appUrl,
@@ -54,6 +64,14 @@ export async function PATCH(req: Request) {
 
     const { appUrl: newAppUrl, ...alertBody } = body;
 
+    // Encrypt sensitive fields
+    if (alertBody.slackWebhookUrl) {
+      alertBody.slackWebhookUrl = encrypt(alertBody.slackWebhookUrl) ?? alertBody.slackWebhookUrl;
+    }
+    if (alertBody.telegramBotToken) {
+      alertBody.telegramBotToken = encrypt(alertBody.telegramBotToken) ?? alertBody.telegramBotToken;
+    }
+
     const results = await Promise.all([
       db
         .update(alertSettings)
@@ -70,6 +88,14 @@ export async function PATCH(req: Request) {
 
     const settings = results[0][0];
     const user = results[1][0];
+
+    // Decrypt for response
+    if (settings.slackWebhookUrl) {
+      settings.slackWebhookUrl = decrypt(settings.slackWebhookUrl) ?? settings.slackWebhookUrl;
+    }
+    if (settings.telegramBotToken) {
+      settings.telegramBotToken = decrypt(settings.telegramBotToken) ?? settings.telegramBotToken;
+    }
 
     return NextResponse.json({
       ...settings,

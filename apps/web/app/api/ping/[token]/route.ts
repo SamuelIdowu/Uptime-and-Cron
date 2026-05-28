@@ -3,11 +3,40 @@ import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 
+// Simple in-memory rate limiting (works per-instance)
+// NOTE: For production on Vercel, @upstash/ratelimit is recommended
+const rateLimitMap = new Map<string, { count: number; lastReset: number }>();
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
+const MAX_REQUESTS = 30; // Max 30 pings per minute per IP
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const userData = rateLimitMap.get(ip) || { count: 0, lastReset: now };
+
+  if (now - userData.lastReset > RATE_LIMIT_WINDOW) {
+    userData.count = 1;
+    userData.lastReset = now;
+    rateLimitMap.set(ip, userData);
+    return false;
+  }
+
+  userData.count++;
+  rateLimitMap.set(ip, userData);
+  return userData.count > MAX_REQUESTS;
+}
+
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ token: string }> }
 ) {
   try {
+    const headerPayload = await headers();
+    const ip = headerPayload.get("x-forwarded-for") || "unknown";
+
+    if (checkRateLimit(ip)) {
+      return new NextResponse("Too Many Requests", { status: 429 });
+    }
+
     const { token } = await params;
     const heartbeat = await db.query.heartbeatMonitors.findFirst({
       where: eq(heartbeatMonitors.pingToken, token),
@@ -20,9 +49,6 @@ export async function GET(
     if (heartbeat.paused) {
       return new NextResponse("Heartbeat is paused", { status: 200 });
     }
-
-    const headerPayload = await headers();
-    const ip = headerPayload.get("x-forwarded-for") || "unknown";
 
     const isRecovering = heartbeat.status === "down" || heartbeat.status === "late";
 
@@ -58,6 +84,13 @@ export async function POST(
   { params }: { params: Promise<{ token: string }> }
 ) {
   try {
+    const headerPayload = await headers();
+    const ip = headerPayload.get("x-forwarded-for") || "unknown";
+
+    if (checkRateLimit(ip)) {
+      return new NextResponse("Too Many Requests", { status: 429 });
+    }
+
     const { token } = await params;
     const heartbeat = await db.query.heartbeatMonitors.findFirst({
       where: eq(heartbeatMonitors.pingToken, token),
@@ -70,9 +103,6 @@ export async function POST(
     if (heartbeat.paused) {
       return new NextResponse("Heartbeat is paused", { status: 200 });
     }
-
-    const headerPayload = await headers();
-    const ip = headerPayload.get("x-forwarded-for") || "unknown";
 
     const isRecovering = heartbeat.status === "down" || heartbeat.status === "late";
 

@@ -1,3 +1,5 @@
+import { decrypt } from "./crypto";
+
 export async function sendTelegramAlert(
   botToken: string,
   chatId: string,
@@ -5,16 +7,17 @@ export async function sendTelegramAlert(
   status: "up" | "down" | "late" | "recovered",
   url?: string
 ) {
+  const decryptedToken = decrypt(botToken) || botToken;
   const isUp = status === "up" || status === "recovered";
   const icon = status === "recovered" ? "✅" : isUp ? "✅" : "🚨";
   const text = `${icon} *${monitorName}* is now *${status.toUpperCase()}*${url ? `\nURL: ${url}` : ""}`;
 
-  if (!botToken) {
+  if (!decryptedToken) {
     console.error("[TELEGRAM_ERROR] botToken is not provided.");
     return { success: false, error: "Missing bot token" };
   }
 
-  const telegramUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
+  const telegramUrl = `https://api.telegram.org/bot${decryptedToken}/sendMessage`;
 
   try {
     const response = await fetch(telegramUrl, {

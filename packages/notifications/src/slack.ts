@@ -1,9 +1,12 @@
+import { decrypt } from "./crypto";
+
 export async function sendSlackAlert(
   webhookUrl: string,
   monitorName: string,
   status: "up" | "down" | "late" | "recovered",
   url?: string
 ) {
+  const decryptedUrl = decrypt(webhookUrl) || webhookUrl;
   const isUp = status === "up" || status === "recovered";
   const icon = status === "recovered" ? "✅" : isUp ? "✅" : "🚨";
   const color = isUp ? "#22c55e" : "#ef4444";
@@ -38,7 +41,7 @@ export async function sendSlackAlert(
   };
 
   try {
-    const response = await fetch(webhookUrl, {
+    const response = await fetch(decryptedUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
