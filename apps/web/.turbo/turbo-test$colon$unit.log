@@ -4,11 +4,12 @@
 
 [33mThe plugin "vite-tsconfig-paths" is detected. Vite now supports tsconfig paths resolution natively via the [1mresolve.tsconfigPaths[22m option. You can remove the plugin and set [1mresolve.tsconfigPaths: true[22m in your Vite config instead.[39m
 
- RUN  v4.1.7 C:/Users/USER/Desktop/saas projects/uptime_and_cron/apps/web
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.7 [39m[90mC:/Users/USER/Desktop/saas projects/uptime_and_cron/apps/web[39m
 
+ [32m✓[39m components/status-badge.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 144[2mms[22m[39m
 
- Test Files  1 passed (1)
-      Tests  4 passed (4)
-   Start at  22:48:43
-   Duration  8.22s (transform 383ms, setup 423ms, import 1.83s, tests 182ms, environment 4.83s)
+[2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[32m4 passed[39m[22m[90m (4)[39m
+[2m   Start at [22m 01:01:12
+[2m   Duration [22m 10.28s[2m (transform 559ms, setup 2.19s, import 1.05s, tests 144ms, environment 5.90s)[22m
 

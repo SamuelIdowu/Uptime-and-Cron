@@ -5,6 +5,24 @@
 
 Running 2 tests using 2 workers
 
-[1A[2K[1/2] [chromium] › e2e\smoke.test.ts:3:5 › should load the sign-in page
-[1A[2K[2/2] [chromium] › e2e\smoke.test.ts:9:5 › should have metadata title
-[1A[2K  2 passed (10.1s)
+[1A[2K[1/2] [chromium] › e2e\smoke.test.ts:9:5 › should have metadata title
+[1A[2K[2/2] [chromium] › e2e\smoke.test.ts:3:5 › should load the sign-in page
+[1A[2K  2 passed (28.4s)
+Error in reporter Error: ENOSPC: no space left on device, write
+    at write (node:internal/fs/promises:747:8)
+    at writeFileHandle (node:internal/fs/promises:504:7)
+    at HtmlBuilder._writeStaticAssets (C:\Users\USER\Desktop\saas projects\uptime_and_cron\node_modules\.pnpm\playwright@1.60.0\node_modules\playwright\lib\runner\index.js:3517:7)
+    at HtmlBuilder.build (C:\Users\USER\Desktop\saas projects\uptime_and_cron\node_modules\.pnpm\playwright@1.60.0\node_modules\playwright\lib\runner\index.js:3479:29)
+    at HtmlReporter.onEnd (C:\Users\USER\Desktop\saas projects\uptime_and_cron\node_modules\.pnpm\playwright@1.60.0\node_modules\playwright\lib\runner\index.js:3301:25)
+    at wrapAsync (C:\Users\USER\Desktop\saas projects\uptime_and_cron\node_modules\.pnpm\playwright@1.60.0\node_modules\playwright\lib\runner\index.js:1614:12)
+    at Multiplexer.onEnd (C:\Users\USER\Desktop\saas projects\uptime_and_cron\node_modules\.pnpm\playwright@1.60.0\node_modules\playwright\lib\runner\index.js:1582:25)
+    at InternalReporter.onEnd (C:\Users\USER\Desktop\saas projects\uptime_and_cron\node_modules\.pnpm\playwright@1.60.0\node_modules\playwright\lib\runner\index.js:1749:12)
+    at finishTaskRun (C:\Users\USER\Desktop\saas projects\uptime_and_cron\node_modules\.pnpm\playwright@1.60.0\node_modules\playwright\lib\runner\index.js:5822:26)
+    at runTasks (C:\Users\USER\Desktop\saas projects\uptime_and_cron\node_modules\.pnpm\playwright@1.60.0\node_modules\playwright\lib\runner\index.js:5809:10)
+    at Object.runAllTestsWithConfig (C:\Users\USER\Desktop\saas projects\uptime_and_cron\node_modules\.pnpm\playwright@1.60.0\node_modules\playwright\lib\runner\index.js:6480:18)
+    at runTests (C:\Users\USER\Desktop\saas projects\uptime_and_cron\node_modules\.pnpm\playwright@1.60.0\node_modules\playwright\lib\cli\testActions.js:93:18)
+    at _Command.<anonymous> (C:\Users\USER\Desktop\saas projects\uptime_and_cron\node_modules\.pnpm\playwright@1.60.0\node_modules\playwright\lib\program.js:50:7) {
+  errno: -4055,
+  code: 'ENOSPC',
+  syscall: 'write'
+}
