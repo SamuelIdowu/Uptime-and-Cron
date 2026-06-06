@@ -10,7 +10,11 @@ import {
   pgEnum,
   index,
   uniqueIndex,
+  jsonb,
+  primaryKey,
 } from "drizzle-orm/pg-core";
+
+// ... (keep existing enums)
 
 // Enums
 export const planEnum = pgEnum("plan", ["free", "paid"]);
@@ -296,6 +300,45 @@ export const alertSettings = pgTable("alert_settings", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+export const statusPages = pgTable(
+  "status_pages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 255 }).notNull(),
+    slug: varchar("slug", { length: 255 }).notNull().unique(),
+    description: text("description"),
+    logoUrl: varchar("logo_url", { length: 2048 }),
+    themeConfig: jsonb("theme_config"),
+    published: boolean("published").notNull().default(false),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    userIdIdx: index("status_pages_user_id_idx").on(table.userId),
+    slugIdx: uniqueIndex("status_pages_slug_idx").on(table.slug),
+  })
+);
+
+export const statusPageMonitors = pgTable(
+  "status_page_monitors",
+  {
+    statusPageId: uuid("status_page_id")
+      .notNull()
+      .references(() => statusPages.id, { onDelete: "cascade" }),
+    monitorId: uuid("monitor_id")
+      .notNull()
+      .references(() => monitors.id, { onDelete: "cascade" }),
+    order: integer("order").notNull().default(0),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.statusPageId, table.monitorId] }),
+  })
+);
+
 import { relations } from "drizzle-orm";
 
 // ... (keep existing enums and tables)
@@ -304,11 +347,31 @@ import { relations } from "drizzle-orm";
 export const usersRelations = relations(users, ({ many, one }) => ({
   monitors: many(monitors),
   heartbeatMonitors: many(heartbeatMonitors),
+  statusPages: many(statusPages),
   alerts: many(alerts),
   environments: many(environments),
   alertSettings: one(alertSettings, {
     fields: [users.id],
     references: [alertSettings.userId],
+  }),
+}));
+
+export const statusPagesRelations = relations(statusPages, ({ one, many }) => ({
+  user: one(users, {
+    fields: [statusPages.userId],
+    references: [users.id],
+  }),
+  monitors: many(statusPageMonitors),
+}));
+
+export const statusPageMonitorsRelations = relations(statusPageMonitors, ({ one }) => ({
+  statusPage: one(statusPages, {
+    fields: [statusPageMonitors.statusPageId],
+    references: [statusPages.id],
+  }),
+  monitor: one(monitors, {
+    fields: [statusPageMonitors.monitorId],
+    references: [monitors.id],
   }),
 }));
 
@@ -418,4 +481,6 @@ export type Alert = typeof alerts.$inferSelect;
 export type AlertSettings = typeof alertSettings.$inferSelect;
 export type Environment = typeof environments.$inferSelect;
 export type MonitorTarget = typeof monitorTargets.$inferSelect;
+export type StatusPage = typeof statusPages.$inferSelect;
+export type StatusPageMonitor = typeof statusPageMonitors.$inferSelect;
 

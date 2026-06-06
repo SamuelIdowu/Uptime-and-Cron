@@ -15,6 +15,7 @@ import { UptimeBar, DailyStatus } from "@/components/uptime-bar";
 import { PingTimingChart } from "@/components/ping-timing-chart";
 import { formatDistanceToNow, subDays, startOfDay, endOfDay, isSameDay } from "date-fns";
 import { HeartbeatPageActions } from "@/components/heartbeat-page-actions";
+import { HeartbeatPingTable } from "@/components/heartbeat-ping-table";
 import { cn } from "@/lib/utils";
 import { headers } from "next/headers";
 
@@ -249,7 +250,7 @@ export default async function HeartbeatDetailPage({
               <div className="bg-card border border-border p-6 rounded-md space-y-6">
                 <div className="space-y-3">
                   <p className="eyebrow text-[10px] text-mute">Unique Endpoint</p>
-                  <CopyField value={pingUrl} token={heartbeat.pingToken} />
+                  <CopyField value={pingUrl} token={heartbeat.pingToken} heartbeatId={heartbeat.id} />
                 </div>
 
                 <IntegrationSnippet url={pingUrl} />
@@ -291,38 +292,7 @@ export default async function HeartbeatDetailPage({
             </h2>
             <Button variant="ghost" size="sm" className="eyebrow text-[10px]">Export Logs</Button>
           </div>
-          <div className="bg-background border border-border rounded-md overflow-hidden">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="bg-secondary/30 border-b border-border eyebrow text-[10px] text-mute">
-                  <th className="px-6 py-4">Timestamp</th>
-                  <th className="px-6 py-4 text-center">Status</th>
-                  <th className="px-6 py-4">Duration</th>
-                  <th className="px-6 py-4 text-right">Source IP</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/40">
-                {allPings.slice(0, 20).map((ping: any) => (
-                  <tr key={ping.id} className="hover:bg-secondary/50 transition-colors cursor-pointer">
-                    <td className="px-6 py-5 text-sm font-bold text-ink font-mono tracking-tight">
-                      {new Date(ping.receivedAt).toLocaleString()}
-                    </td>
-                    <td className="px-6 py-5 text-center">
-                      <StatusBadge status={(ping.exitCode === 0 || ping.exitCode === null) ? "up" : "down"}>
-                        {(ping.exitCode === 0 || ping.exitCode === null) ? "Success" : "Failed"}
-                      </StatusBadge>
-                    </td>
-                    <td className="px-6 py-5 text-sm text-mute font-mono">
-                      {ping.durationMs ? `${ping.durationMs}ms` : "-"}
-                    </td>
-                    <td className="px-6 py-5 font-mono text-[11px] text-mute text-right uppercase tracking-tighter">
-                      {ping.sourceIp || "Internal Node"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <HeartbeatPingTable pings={allPings.slice(0, 50)} />
         </section>
       </div>
     </main>

@@ -19,7 +19,7 @@ export default function IntegrationsPlaceholder() {
 
         <section className="flex items-center justify-center py-12 sm:py-20">
           <EmptyState 
-            icon={Blocks}
+            icon={<Blocks className="size-6" />}
             title="Module Integration"
             description="External connectors for Slack, PagerDuty, and Discord are currently in validation. Public APIs will be enabled in the next cycle."
             className="max-w-md w-full"

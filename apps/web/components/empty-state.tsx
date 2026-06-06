@@ -6,24 +6,42 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 interface EmptyStateProps {
-  icon: LucideIcon;
+  icon: React.ReactNode;
   title: string;
   description: string;
-  action?: {
+  action?: React.ReactNode | {
     label: string;
     onClick: () => void;
-    icon?: LucideIcon;
+    icon?: React.ReactNode;
   };
   className?: string;
 }
 
 export function EmptyState({ 
-  icon: Icon, 
+  icon, 
   title, 
   description, 
   action, 
   className 
 }: EmptyStateProps) {
+  const renderAction = () => {
+    if (!action) return null;
+    
+    if (typeof action === "object" && "label" in action) {
+      return (
+        <Button 
+          onClick={action.onClick}
+          className="gap-2 eyebrow text-[10px] px-6 shadow-[0_0_10px_rgba(0,217,146,0.2)]"
+        >
+          {action.icon ? action.icon : <Plus className="size-3.5" />}
+          {action.label}
+        </Button>
+      );
+    }
+
+    return action;
+  };
+
   return (
     <motion.div 
       initial={{ opacity: 0, y: 10 }}
@@ -35,8 +53,8 @@ export function EmptyState({
     >
       <div className="relative mb-4">
         <div className="absolute inset-0 bg-primary/10 blur-2xl rounded-full" />
-        <div className="relative size-12 rounded-sm bg-secondary border border-border flex items-center justify-center">
-          <Icon className="size-6 text-primary" />
+        <div className="relative size-12 rounded-sm bg-secondary border border-border flex items-center justify-center text-primary">
+          {icon}
         </div>
       </div>
       
@@ -45,15 +63,7 @@ export function EmptyState({
         {description}
       </p>
 
-      {action && (
-        <Button 
-          onClick={action.onClick}
-          className="gap-2 eyebrow text-[10px] px-6 shadow-[0_0_10px_rgba(0,217,146,0.2)]"
-        >
-          {action.icon ? <action.icon className="size-3.5" /> : <Plus className="size-3.5" />}
-          {action.label}
-        </Button>
-      )}
+      {renderAction()}
     </motion.div>
   );
 }

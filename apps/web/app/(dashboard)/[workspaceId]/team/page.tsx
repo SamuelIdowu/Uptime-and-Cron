@@ -19,7 +19,7 @@ export default function TeamPlaceholder() {
 
         <section className="flex items-center justify-center py-12 sm:py-20">
           <EmptyState 
-            icon={Users}
+            icon={<Users className="size-6" />}
             title="Access Control"
             description="Multi-user collaboration and role-based access control are currently in security audit. Enrollment will open in the next sprint."
             className="max-w-md w-full"

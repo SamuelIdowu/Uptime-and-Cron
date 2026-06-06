@@ -19,7 +19,7 @@ export default function MaintenancePlaceholder() {
 
         <section className="flex items-center justify-center py-12 sm:py-20">
           <EmptyState 
-            icon={Wrench}
+            icon={<Wrench className="size-6" />}
             title="Downtime Scheduler"
             description="Maintenance window controls are currently under calibration. Automated monitor pausing will be operational soon."
             className="max-w-md w-full"

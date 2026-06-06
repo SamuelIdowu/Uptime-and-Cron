@@ -8,6 +8,7 @@ export const heartbeatSchema = z.object({
 
 export const updateHeartbeatSchema = heartbeatSchema.partial().extend({
   paused: z.boolean().optional(),
+  rotateToken: z.boolean().optional(),
 });
 
 export type HeartbeatInput = z.infer<typeof heartbeatSchema>;

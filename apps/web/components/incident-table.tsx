@@ -31,7 +31,7 @@ export function IncidentTable({ data = [] }: { data?: Incident[] }) {
   if (data.length === 0) {
     return (
       <EmptyState 
-        icon={ShieldCheck}
+        icon={<ShieldCheck className="size-6" />}
         title="100% Uptime Maintained"
         description="No recent incidents or outages detected for this monitor. All systems are operating normally."
       />

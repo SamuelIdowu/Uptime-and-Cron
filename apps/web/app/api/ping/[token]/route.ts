@@ -2,14 +2,34 @@ import { db, heartbeatMonitors, heartbeatPings, dispatchAlerts } from "@steady-s
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
 
-// Simple in-memory rate limiting (works per-instance)
-// NOTE: For production on Vercel, @upstash/ratelimit is recommended
+// 1. Upstash Redis Rate Limiting (Production)
+let ratelimit: Ratelimit | null = null;
+
+if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+  ratelimit = new Ratelimit({
+    redis: Redis.fromEnv(),
+    limiter: Ratelimit.slidingWindow(30, "60 s"),
+    analytics: true,
+    prefix: "@steady-state/ratelimit",
+  });
+}
+
+// 2. In-memory fallback (Local Development / No Upstash)
 const rateLimitMap = new Map<string, { count: number; lastReset: number }>();
 const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
 const MAX_REQUESTS = 30; // Max 30 pings per minute per IP
 
-function checkRateLimit(ip: string): boolean {
+async function checkRateLimit(ip: string): Promise<boolean> {
+  // Use Upstash if configured
+  if (ratelimit) {
+    const { success } = await ratelimit.limit(ip);
+    return !success;
+  }
+
+  // Fallback to in-memory
   const now = Date.now();
   const userData = rateLimitMap.get(ip) || { count: 0, lastReset: now };
 
@@ -33,7 +53,7 @@ export async function GET(
     const headerPayload = await headers();
     const ip = headerPayload.get("x-forwarded-for") || "unknown";
 
-    if (checkRateLimit(ip)) {
+    if (await checkRateLimit(ip)) {
       return new NextResponse("Too Many Requests", { status: 429 });
     }
 
@@ -79,6 +99,13 @@ export async function GET(
   }
 }
 
+const MAX_LOG_SIZE = 10 * 1024; // 10KB
+
+function truncateLog(log: string): string {
+  if (log.length <= MAX_LOG_SIZE) return log;
+  return log.slice(-MAX_LOG_SIZE) + "\n... (truncated)";
+}
+
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ token: string }> }
@@ -87,7 +114,7 @@ export async function POST(
     const headerPayload = await headers();
     const ip = headerPayload.get("x-forwarded-for") || "unknown";
 
-    if (checkRateLimit(ip)) {
+    if (await checkRateLimit(ip)) {
       return new NextResponse("Too Many Requests", { status: 429 });
     }
 
@@ -104,8 +131,6 @@ export async function POST(
       return new NextResponse("Heartbeat is paused", { status: 200 });
     }
 
-    const isRecovering = heartbeat.status === "down" || heartbeat.status === "late";
-
     let durationMs: number | undefined;
     let exitCode: number | undefined;
     let log: string | undefined;
@@ -114,10 +139,14 @@ export async function POST(
       const body = await req.json();
       if (typeof body.duration === "number") durationMs = body.duration;
       if (typeof body.exitCode === "number") exitCode = body.exitCode;
-      if (typeof body.log === "string") log = body.log;
+      if (typeof body.log === "string") log = truncateLog(body.log);
     } catch (e) {
       // Ignored
     }
+
+    const newStatus = (exitCode === 0 || exitCode === undefined || exitCode === null) ? "up" : "down";
+    const isRecovering = (heartbeat.status === "down" || heartbeat.status === "late") && newStatus === "up";
+    const isFailing = heartbeat.status !== "down" && newStatus === "down";
 
     // 1. Record the ping
     await db.insert(heartbeatPings).values({
@@ -133,13 +162,15 @@ export async function POST(
       .update(heartbeatMonitors)
       .set({
         lastPingAt: new Date(),
-        status: "up", // Reset to UP when a ping is received
+        status: newStatus,
       })
       .where(eq(heartbeatMonitors.id, heartbeat.id));
 
-    // 3. Dispatch recovery alert if needed
+    // 3. Dispatch alerts
     if (isRecovering) {
       await dispatchAlerts(null, heartbeat.id, "recovered");
+    } else if (isFailing) {
+      await dispatchAlerts(null, heartbeat.id, "down");
     }
 
     return new NextResponse("OK", { status: 200 });

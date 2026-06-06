@@ -3,13 +3,14 @@ import { createCipheriv, createDecipheriv, randomBytes } from "crypto";
 const ALGORITHM = "aes-256-gcm";
 const IV_LENGTH = 12;
 const PREFIX = "enc:";
+const PREFIX_V1 = "v1:enc:";
 
 /**
  * Encrypts text using AES-256-GCM
- * Format: enc:iv:tag:encrypted
+ * Format: v1:enc:iv:tag:encrypted
  */
 export function encrypt(text: string | null | undefined): string | null | undefined {
-  if (!text || text.startsWith(PREFIX)) return text;
+  if (!text || text.startsWith(PREFIX) || text.startsWith(PREFIX_V1)) return text;
 
   const key = process.env.ENCRYPTION_KEY;
   if (!key) {
@@ -30,15 +31,24 @@ export function encrypt(text: string | null | undefined): string | null | undefi
 
   const tag = cipher.getAuthTag().toString("hex");
 
-  return `${PREFIX}${iv.toString("hex")}:${tag}:${encrypted}`;
+  return `${PREFIX_V1}${iv.toString("hex")}:${tag}:${encrypted}`;
 }
 
 /**
  * Decrypts text using AES-256-GCM
- * If text doesn't have the prefix, returns it as is (graceful transition)
+ * Supports both legacy (enc:) and versioned (v1:enc:) formats
  */
 export function decrypt(text: string | null | undefined): string | null | undefined {
-  if (!text || !text.startsWith(PREFIX)) return text;
+  if (!text) return text;
+
+  let partString = "";
+  if (text.startsWith(PREFIX_V1)) {
+    partString = text.slice(PREFIX_V1.length);
+  } else if (text.startsWith(PREFIX)) {
+    partString = text.slice(PREFIX.length);
+  } else {
+    return text;
+  }
 
   const key = process.env.ENCRYPTION_KEY;
   if (!key) {
@@ -51,7 +61,7 @@ export function decrypt(text: string | null | undefined): string | null | undefi
   }
 
   try {
-    const parts = text.slice(PREFIX.length).split(":");
+    const parts = partString.split(":");
     if (parts.length !== 3) return text;
 
     const [ivHex, tagHex, encryptedHex] = parts;
@@ -68,7 +78,7 @@ export function decrypt(text: string | null | undefined): string | null | undefi
     return decrypted;
   } catch (error) {
     console.error("[CRYPTO_DECRYPT_ERROR]", error);
-    // Return original text if decryption fails (might be malformed but we don't want to crash everything)
+    // Return original text if decryption fails
     return text;
   }
 }

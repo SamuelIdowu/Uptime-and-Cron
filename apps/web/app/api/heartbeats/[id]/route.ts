@@ -3,6 +3,7 @@ import { db, heartbeatMonitors } from "@steady-state/db";
 import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { updateHeartbeatSchema } from "@/lib/validations/heartbeat";
+import { generateToken } from "@/lib/utils";
 
 export async function GET(
   req: Request,
@@ -44,11 +45,16 @@ export async function PATCH(
 
   try {
     const json = await req.json();
-    const body = updateHeartbeatSchema.parse(json);
+    const { rotateToken, ...body } = updateHeartbeatSchema.parse(json);
+
+    const updatePayload: any = { ...body };
+    if (rotateToken) {
+      updatePayload.pingToken = generateToken();
+    }
 
     const heartbeat = await db
       .update(heartbeatMonitors)
-      .set(body)
+      .set(updatePayload)
       .where(and(eq(heartbeatMonitors.id, id), eq(heartbeatMonitors.userId, userId)))
       .returning();
 

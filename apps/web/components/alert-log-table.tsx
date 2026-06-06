@@ -25,7 +25,7 @@ export function AlertLogTable({ data }: { data: AlertLog[] }) {
   if (data.length === 0) {
     return (
       <EmptyState 
-        icon={BellOff}
+        icon={<BellOff className="size-6" />}
         title="No alerts triggered"
         description="All systems are fully operational. Alert history will appear here when an incident occurs and notifications are dispatched."
       />
