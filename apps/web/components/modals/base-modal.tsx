@@ -17,6 +17,8 @@ interface BaseModalProps {
   children: React.ReactNode;
   className?: string;
   maxWidth?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl";
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export function BaseModal({
@@ -26,6 +28,8 @@ export function BaseModal({
   children,
   className,
   maxWidth = "md",
+  open,
+  onOpenChange,
 }: BaseModalProps) {
   const maxWidthClasses = {
     sm: "sm:max-w-sm",
@@ -38,7 +42,7 @@ export function BaseModal({
   };
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
       <DialogContent className={cn(maxWidthClasses[maxWidth], "overflow-hidden p-0", className)}>
         <div className="flex flex-col h-full">
