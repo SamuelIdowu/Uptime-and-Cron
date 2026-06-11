@@ -1,11 +1,22 @@
-import { db, heartbeatMonitors, dispatchAlerts } from "@steady-state/db";
-import { eq, and, isNull, or, sql } from "drizzle-orm";
+import { db, heartbeatMonitors, dispatchAlerts, maintenanceWindows } from "@steady-state/db";
+import { eq, and, isNull, or, sql, lte, gte } from "drizzle-orm";
 
 export async function checkHeartbeats() {
   const now = new Date();
   console.log(`[Heartbeat] Starting check at ${now.toISOString()}`);
 
   try {
+    // 0. Fetch active maintenance windows
+    const activeWindows = await db.query.maintenanceWindows.findMany({
+        where: and(
+            lte(maintenanceWindows.startTime, now),
+            gte(maintenanceWindows.endTime, now)
+        )
+    });
+
+    const globalUserIds = new Set(activeWindows.filter(w => !w.monitorId && !w.heartbeatId).map(w => w.userId));
+    const heartbeatIdsInMaintenance = new Set(activeWindows.filter(w => w.heartbeatId).map(w => w.heartbeatId));
+
     // Fetch monitors that are not paused and might be late or down
     // We check anything that hasn't pinged within its period
     const actionableMonitors = await db
@@ -21,9 +32,16 @@ export async function checkHeartbeats() {
         )
       );
 
-    console.log(`[Heartbeat] Found ${actionableMonitors.length} actionable heartbeats.`);
+    // Filter out heartbeats in maintenance
+    const filteredMonitors = actionableMonitors.filter(m => {
+        if (globalUserIds.has(m.userId)) return false;
+        if (heartbeatIdsInMaintenance.has(m.id)) return false;
+        return true;
+    });
 
-    for (const monitor of actionableMonitors) {
+    console.log(`[Heartbeat] Found ${actionableMonitors.length} actionable heartbeats (${filteredMonitors.length} after maintenance filter).`);
+
+    for (const monitor of filteredMonitors) {
       const lastPingOrCreated = monitor.lastPingAt ? new Date(monitor.lastPingAt) : new Date(monitor.createdAt);
       const diffMs = now.getTime() - lastPingOrCreated.getTime();
       const periodMs = monitor.periodMinutes * 60 * 1000;

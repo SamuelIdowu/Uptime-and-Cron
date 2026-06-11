@@ -1,5 +1,5 @@
-import { db, monitors, monitorEvents, monitorChecks, Monitor, dispatchAlerts } from "@steady-state/db";
-import { eq, and, isNull, or, sql, desc } from "drizzle-orm";
+import { db, monitors, monitorEvents, monitorChecks, Monitor, dispatchAlerts, maintenanceWindows } from "@steady-state/db";
+import { eq, and, isNull, or, sql, desc, lte, gte } from "drizzle-orm";
 import axios from "axios";
 import pLimit from "p-limit";
 import https from "https";
@@ -13,6 +13,17 @@ export async function runPoller() {
   console.log(`[Poller] Starting check at ${now.toISOString()}`);
 
   try {
+    // 0. Fetch active maintenance windows
+    const activeWindows = await db.query.maintenanceWindows.findMany({
+        where: and(
+            lte(maintenanceWindows.startTime, now),
+            gte(maintenanceWindows.endTime, now)
+        )
+    });
+
+    const globalUserIds = new Set(activeWindows.filter(w => !w.monitorId && !w.heartbeatId).map(w => w.userId));
+    const monitorIdsInMaintenance = new Set(activeWindows.filter(w => w.monitorId).map(w => w.monitorId));
+
     // 1. Fetch due monitors with targets
     const dueMonitors = await db.query.monitors.findMany({
       where: and(
@@ -27,9 +38,16 @@ export async function runPoller() {
       },
     });
 
-    console.log(`[Poller] Found ${dueMonitors.length} monitors to check.`);
+    // 2. Filter out monitors in maintenance
+    const filteredMonitors = dueMonitors.filter(m => {
+        if (globalUserIds.has(m.userId)) return false;
+        if (monitorIdsInMaintenance.has(m.id)) return false;
+        return true;
+    });
 
-    const tasks = dueMonitors.map((monitor) =>
+    console.log(`[Poller] Found ${dueMonitors.length} monitors (${filteredMonitors.length} after maintenance filter).`);
+
+    const tasks = filteredMonitors.map((monitor) =>
       limit(() => checkMonitor(monitor as any))
     );
 

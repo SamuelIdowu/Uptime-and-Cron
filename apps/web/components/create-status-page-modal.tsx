@@ -28,10 +28,10 @@ export function CreateStatusPageModal({
           <button className="hidden" />
         )}
       </DialogTrigger>
-      <DialogContent className="max-w-4xl bg-background border-border p-0 overflow-hidden rounded-md shadow-modal">
-        <div className="flex h-full min-h-[500px]">
+      <DialogContent className="max-w-4xl bg-background border-border p-0 overflow-hidden rounded-md shadow-modal sm:max-h-[85vh] flex flex-col">
+        <div className="flex flex-1 overflow-hidden min-h-0">
           {/* Sidebar */}
-          <div className="w-64 bg-secondary/50 border-r border-border p-6 flex flex-col gap-6">
+          <div className="w-64 bg-secondary/50 border-r border-border p-6 flex flex-col gap-6 overflow-y-auto">
             <div className="flex flex-col gap-1">
               <h2 className="eyebrow text-[10px] text-ink">Entity Provisioning</h2>
               <p className="text-[10px] text-mute uppercase font-bold opacity-50">Public Status Interface</p>
@@ -49,7 +49,7 @@ export function CreateStatusPageModal({
           </div>
 
           {/* Form Content */}
-          <div className="flex-1 p-10 overflow-y-auto bg-background">
+          <div className="flex-1 pt-10 px-10 overflow-y-auto bg-background">
             <DialogHeader className="mb-10 text-left">
               <DialogTitle className="display-md text-inkStrong uppercase">
                 New Status Page

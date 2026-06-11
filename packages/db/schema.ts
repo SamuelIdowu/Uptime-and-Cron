@@ -339,6 +339,36 @@ export const statusPageMonitors = pgTable(
   })
 );
 
+export const maintenanceWindows = pgTable(
+  "maintenance_windows",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    monitorId: uuid("monitor_id").references(() => monitors.id, {
+      onDelete: "cascade",
+    }),
+    heartbeatId: uuid("heartbeat_id").references(() => heartbeatMonitors.id, {
+      onDelete: "cascade",
+    }),
+    startTime: timestamp("start_time").notNull(),
+    endTime: timestamp("end_time").notNull(),
+    reason: text("reason"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    userIdIdx: index("maintenance_windows_user_id_idx").on(table.userId),
+    monitorIdIdx: index("maintenance_windows_monitor_id_idx").on(table.monitorId),
+    heartbeatIdIdx: index("maintenance_windows_heartbeat_id_idx").on(table.heartbeatId),
+    timeRangeIdx: index("maintenance_windows_time_range_idx").on(
+      table.startTime,
+      table.endTime
+    ),
+  })
+);
+
 import { relations } from "drizzle-orm";
 
 // ... (keep existing enums and tables)
@@ -348,11 +378,27 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   monitors: many(monitors),
   heartbeatMonitors: many(heartbeatMonitors),
   statusPages: many(statusPages),
+  maintenanceWindows: many(maintenanceWindows),
   alerts: many(alerts),
   environments: many(environments),
   alertSettings: one(alertSettings, {
     fields: [users.id],
     references: [alertSettings.userId],
+  }),
+}));
+
+export const maintenanceWindowsRelations = relations(maintenanceWindows, ({ one }) => ({
+  user: one(users, {
+    fields: [maintenanceWindows.userId],
+    references: [users.id],
+  }),
+  monitor: one(monitors, {
+    fields: [maintenanceWindows.monitorId],
+    references: [monitors.id],
+  }),
+  heartbeat: one(heartbeatMonitors, {
+    fields: [maintenanceWindows.heartbeatId],
+    references: [heartbeatMonitors.id],
   }),
 }));
 
@@ -392,6 +438,7 @@ export const monitorsRelations = relations(monitors, ({ one, many }) => ({
   dailyAggregates: many(monitorDailyAggregates),
   alerts: many(alerts),
   targets: many(monitorTargets),
+  maintenanceWindows: many(maintenanceWindows),
 }));
 
 export const monitorTargetsRelations = relations(monitorTargets, ({ one }) => ({
@@ -430,7 +477,9 @@ export const heartbeatMonitorsRelations = relations(heartbeatMonitors, ({ one, m
   pings: many(heartbeatPings),
   dailyAggregates: many(heartbeatDailyAggregates),
   alerts: many(alerts),
+  maintenanceWindows: many(maintenanceWindows),
 }));
+
 
 export const heartbeatDailyAggregatesRelations = relations(heartbeatDailyAggregates, ({ one }) => ({
   heartbeat: one(heartbeatMonitors, {
@@ -483,4 +532,5 @@ export type Environment = typeof environments.$inferSelect;
 export type MonitorTarget = typeof monitorTargets.$inferSelect;
 export type StatusPage = typeof statusPages.$inferSelect;
 export type StatusPageMonitor = typeof statusPageMonitors.$inferSelect;
+export type MaintenanceWindow = typeof maintenanceWindows.$inferSelect;
 

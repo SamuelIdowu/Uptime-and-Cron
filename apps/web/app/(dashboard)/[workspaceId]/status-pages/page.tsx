@@ -6,6 +6,7 @@ import { FileText, Plus, ExternalLink, Globe, Settings2, Trash2 } from "lucide-r
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/empty-state";
 import { CreateStatusPageModal } from "@/components/create-status-page-modal";
+import { UpdateStatusPageModal } from "@/components/update-status-page-modal";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -117,9 +118,7 @@ export default async function StatusPagesPage({
                             <ExternalLink className="size-4" />
                         </Button>
                     </Link>
-                    <Button variant="ghost" size="icon-sm" className="text-mute hover:text-inkStrong" title="Edit Settings">
-                        <Settings2 className="size-4" />
-                    </Button>
+                    <UpdateStatusPageModal pageId={page.id} />
                   </div>
                 </div>
               </div>

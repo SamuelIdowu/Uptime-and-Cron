@@ -4,6 +4,7 @@ import "./globals.css";
 import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ClerkThemeProvider } from "@/components/clerk-theme-provider";
+import { Toaster } from "sonner";
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
@@ -41,6 +42,7 @@ export default function RootLayout({
         >
           <ClerkThemeProvider>
             {children}
+            <Toaster position="bottom-right" richColors />
           </ClerkThemeProvider>
         </ThemeProvider>
       </body>
