@@ -55,6 +55,13 @@ export const healthThresholdEnum = pgEnum("health_threshold", [
   "all",
   "quorum",
 ]);
+export const teamRoleEnum = pgEnum("team_role", ["admin", "viewer"]);
+export const invitationStatusEnum = pgEnum("invitation_status", [
+  "pending",
+  "accepted",
+  "expired",
+  "revoked",
+]);
 
 // Tables
 export const users = pgTable("users", {
@@ -369,6 +376,56 @@ export const maintenanceWindows = pgTable(
   })
 );
 
+export const teamMembers = pgTable(
+  "team_members",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: varchar("workspace_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    role: teamRoleEnum("role").notNull().default("viewer"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    workspaceIdIdx: index("team_members_workspace_id_idx").on(table.workspaceId),
+    userIdIdx: index("team_members_user_id_idx").on(table.userId),
+    workspaceUserUnique: uniqueIndex("team_members_workspace_user_unique").on(
+      table.workspaceId,
+      table.userId
+    ),
+  })
+);
+
+export const invitations = pgTable(
+  "invitations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: varchar("workspace_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    email: varchar("email", { length: 255 }).notNull(),
+    role: teamRoleEnum("role").notNull().default("viewer"),
+    token: varchar("token", { length: 255 }).notNull().unique(),
+    status: invitationStatusEnum("status").notNull().default("pending"),
+    invitedBy: varchar("invited_by", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    expiresAt: timestamp("expires_at").notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    workspaceIdIdx: index("invitations_workspace_id_idx").on(table.workspaceId),
+    tokenIdx: uniqueIndex("invitations_token_idx").on(table.token),
+    emailWorkspaceUnique: uniqueIndex("invitations_email_workspace_unique").on(
+      table.email,
+      table.workspaceId
+    ),
+  })
+);
+
 import { relations } from "drizzle-orm";
 
 // ... (keep existing enums and tables)
@@ -381,9 +438,39 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   maintenanceWindows: many(maintenanceWindows),
   alerts: many(alerts),
   environments: many(environments),
+  teamMemberships: many(teamMembers, { relationName: "user_memberships" }),
+  workspaceMembers: many(teamMembers, { relationName: "workspace_members" }),
+  sentInvitations: many(invitations, { relationName: "sent_invitations" }),
+  workspaceInvitations: many(invitations, { relationName: "workspace_invitations" }),
   alertSettings: one(alertSettings, {
     fields: [users.id],
     references: [alertSettings.userId],
+  }),
+}));
+
+export const teamMembersRelations = relations(teamMembers, ({ one }) => ({
+  workspace: one(users, {
+    fields: [teamMembers.workspaceId],
+    references: [users.id],
+    relationName: "workspace_members",
+  }),
+  user: one(users, {
+    fields: [teamMembers.userId],
+    references: [users.id],
+    relationName: "user_memberships",
+  }),
+}));
+
+export const invitationsRelations = relations(invitations, ({ one }) => ({
+  workspace: one(users, {
+    fields: [invitations.workspaceId],
+    references: [users.id],
+    relationName: "workspace_invitations",
+  }),
+  inviter: one(users, {
+    fields: [invitations.invitedBy],
+    references: [users.id],
+    relationName: "sent_invitations",
   }),
 }));
 
@@ -533,4 +620,6 @@ export type MonitorTarget = typeof monitorTargets.$inferSelect;
 export type StatusPage = typeof statusPages.$inferSelect;
 export type StatusPageMonitor = typeof statusPageMonitors.$inferSelect;
 export type MaintenanceWindow = typeof maintenanceWindows.$inferSelect;
+export type TeamMember = typeof teamMembers.$inferSelect;
+export type Invitation = typeof invitations.$inferSelect;
 
