@@ -71,7 +71,7 @@ export function AppUrlForm({ initialAppUrl }: AppUrlFormProps) {
               placeholder="https://uptime.yourdomain.com"
               className="font-mono text-sm"
             />
-            <Button onClick={onSave} disabled={isLoading} className="font-bold eyebrow text-[10px] px-8 h-10 shrink-0">
+            <Button onClick={onSave} disabled={isLoading} className="font-bold eyebrow text-[10px] px-8 h-9 shrink-0">
               {isLoading ? "Saving..." : "Update URL"}
             </Button>
           </div>

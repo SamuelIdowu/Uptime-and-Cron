@@ -70,12 +70,20 @@ export async function POST(req: Request) {
     const inviteLink = `${appUrl}/invite/${token}`;
 
     // 6. Send email
-    await sendInviteEmail({
+    const emailRes = await sendInviteEmail({
       to: email,
       workspaceName: workspace?.email ? `${workspace.email.split("@")[0]}'s Team` : "SteadyState Team",
       inviterName,
       inviteLink,
     });
+
+    if (!emailRes.success) {
+      console.error("[TEAM_INVITE_EMAIL_ERROR]", emailRes.error);
+      // We still return the invitation object but maybe add a warning or handle differently
+      // For now, let's keep it simple and just log it, or return a 500 if we want to be strict.
+      // Actually, it's better to return 500 if the email fails so the user knows.
+      return new NextResponse("Failed to send invite email. Please check your notification settings.", { status: 500 });
+    }
 
     return NextResponse.json(invitation);
   } catch (error) {

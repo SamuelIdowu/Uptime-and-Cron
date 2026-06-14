@@ -18,7 +18,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { StatusPage, Monitor } from "@steady-state/db";
-import { FileText, Link as LinkIcon, Palette, Activity, Save, Globe } from "lucide-react";
+import { FileText, Link as LinkIcon, Palette, Activity, Save, Globe, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 

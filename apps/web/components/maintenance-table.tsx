@@ -169,7 +169,7 @@ export function MaintenanceTable({ windows, workspaceId }: MaintenanceTableProps
                   <td className="px-6 py-5 text-right whitespace-nowrap">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon-sm" className="opacity-0 group-hover:opacity-100 transition-opacity rounded-sm">
+                        <Button variant="ghost" size="icon-sm" className="transition-opacity rounded-sm">
                           <MoreVertical className="size-4" />
                         </Button>
                       </DropdownMenuTrigger>

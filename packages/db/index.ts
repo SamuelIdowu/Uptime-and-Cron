@@ -45,6 +45,21 @@ export const db = new Proxy({} as any, {
   }
 });
 
+let readSql: any;
+export const readDb = new Proxy({} as any, {
+  get(target, prop, receiver) {
+    if (!readSql) {
+      const url = process.env.READ_DATABASE_URL || process.env.DATABASE_URL;
+      if (!url) {
+        throw new Error("DATABASE_URL is not set. Ensure .env is loaded before accessing the database.");
+      }
+      readSql = neon(url);
+    }
+    const d = drizzle(readSql, { schema });
+    return Reflect.get(d, prop, receiver);
+  }
+});
+
 export * from "./schema";
 
 export async function dispatchAlerts(

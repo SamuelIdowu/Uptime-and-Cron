@@ -3,8 +3,8 @@ import { z } from "zod";
 const baseMaintenanceSchema = z.object({
   monitorId: z.string().uuid().optional().nullable(),
   heartbeatId: z.string().uuid().optional().nullable(),
-  startTime: z.string().pipe(z.coerce.date()),
-  endTime: z.string().pipe(z.coerce.date()),
+  startTime: z.coerce.date(),
+  endTime: z.coerce.date(),
   reason: z.string().max(500, "Reason is too long").optional().nullable(),
 });
 

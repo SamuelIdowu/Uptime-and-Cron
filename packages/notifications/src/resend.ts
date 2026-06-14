@@ -44,7 +44,7 @@ export async function sendAlertEmail(
 
   try {
     await client.emails.send({
-      from: "SteadyState <alerts@steadystate.dev>", // Replace with verified domain
+      from: process.env.RESEND_FROM_EMAIL || "SteadyState <alerts@steadystate.dev>",
       to,
       subject,
       html,
@@ -97,7 +97,7 @@ export async function sendInviteEmail({
 
   try {
     await client.emails.send({
-      from: "SteadyState <invites@steadystate.dev>",
+      from: process.env.RESEND_FROM_EMAIL || "SteadyState <invites@steadystate.dev>",
       to,
       subject,
       html,

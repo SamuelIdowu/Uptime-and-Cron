@@ -63,7 +63,7 @@ export default async function MaintenancePage({
             monitors={userMonitors}
             heartbeats={userHeartbeats}
             trigger={
-              <Button className="gap-1.5 eyebrow text-[10px] px-4 shadow-[0_0_10px_rgba(0,217,146,0.2)]">
+              <Button className="gap-1.5 mb-6 eyebrow text-[10px] px-4 shadow-[0_0_10px_rgba(0,217,146,0.2)]">
                 <Plus className="size-3.5" />
                 <span>Schedule Window</span>
               </Button>

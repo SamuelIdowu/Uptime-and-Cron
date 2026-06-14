@@ -62,6 +62,12 @@ export const invitationStatusEnum = pgEnum("invitation_status", [
   "expired",
   "revoked",
 ]);
+export const incidentStatusEnum = pgEnum("incident_status", [
+  "investigating",
+  "identified",
+  "monitoring",
+  "resolved",
+]);
 
 // Tables
 export const users = pgTable("users", {
@@ -426,6 +432,43 @@ export const invitations = pgTable(
   })
 );
 
+export const incidents = pgTable(
+  "incidents",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    monitorId: uuid("monitor_id")
+      .notNull()
+      .references(() => monitors.id, { onDelete: "cascade" }),
+    status: incidentStatusEnum("status").notNull().default("investigating"),
+    title: varchar("title", { length: 255 }).notNull(),
+    description: text("description"),
+    startedAt: timestamp("started_at").notNull().defaultNow(),
+    resolvedAt: timestamp("resolved_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    monitorIdIdx: index("incidents_monitor_id_idx").on(table.monitorId),
+    statusIdx: index("incidents_status_idx").on(table.status),
+  })
+);
+
+export const incidentEvents = pgTable(
+  "incident_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    incidentId: uuid("incident_id")
+      .notNull()
+      .references(() => incidents.id, { onDelete: "cascade" }),
+    status: incidentStatusEnum("status").notNull(),
+    description: text("description").notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    incidentIdIdx: index("incident_events_incident_id_idx").on(table.incidentId),
+  })
+);
+
 import { relations } from "drizzle-orm";
 
 // ... (keep existing enums and tables)
@@ -526,6 +569,22 @@ export const monitorsRelations = relations(monitors, ({ one, many }) => ({
   alerts: many(alerts),
   targets: many(monitorTargets),
   maintenanceWindows: many(maintenanceWindows),
+  incidents: many(incidents),
+}));
+
+export const incidentsRelations = relations(incidents, ({ one, many }) => ({
+  monitor: one(monitors, {
+    fields: [incidents.monitorId],
+    references: [monitors.id],
+  }),
+  events: many(incidentEvents),
+}));
+
+export const incidentEventsRelations = relations(incidentEvents, ({ one }) => ({
+  incident: one(incidents, {
+    fields: [incidentEvents.incidentId],
+    references: [incidents.id],
+  }),
 }));
 
 export const monitorTargetsRelations = relations(monitorTargets, ({ one }) => ({
@@ -622,4 +681,6 @@ export type StatusPageMonitor = typeof statusPageMonitors.$inferSelect;
 export type MaintenanceWindow = typeof maintenanceWindows.$inferSelect;
 export type TeamMember = typeof teamMembers.$inferSelect;
 export type Invitation = typeof invitations.$inferSelect;
+export type Incident = typeof incidents.$inferSelect;
+export type IncidentEvent = typeof incidentEvents.$inferSelect;
 

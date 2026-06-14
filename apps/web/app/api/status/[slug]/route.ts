@@ -1,4 +1,4 @@
-import { db, statusPages, monitors } from "@steady-state/db";
+import { readDb, statusPages, monitors } from "@steady-state/db";
 import { eq, and } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
@@ -9,7 +9,7 @@ export async function GET(
   const { slug } = await params;
 
   try {
-    const page = await db.query.statusPages.findFirst({
+    const page = await readDb.query.statusPages.findFirst({
       where: eq(statusPages.slug, slug),
       with: {
         monitors: {

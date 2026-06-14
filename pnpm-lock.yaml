@@ -70,6 +70,9 @@ importers:
       '@upstash/redis':
         specifier: ^1.38.0
         version: 1.38.0
+      axios:
+        specifier: ^1.6.8
+        version: 1.16.1
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -85,6 +88,9 @@ importers:
       framer-motion:
         specifier: ^12.40.0
         version: 12.40.0(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      jsonpath-plus:
+        specifier: ^10.4.0
+        version: 10.4.0
       lucide-react:
         specifier: ^0.378.0
         version: 0.378.0(react@19.2.6)
@@ -94,6 +100,9 @@ importers:
       next-themes:
         specifier: ^0.4.6
         version: 0.4.6(patch_hash=zfp5vvkx6qamackqjlsh6ywvre)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      p-limit:
+        specifier: ^7.3.0
+        version: 7.3.0
       react:
         specifier: ^19.2.6
         version: 19.2.6

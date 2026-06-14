@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/worker?task=tick",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/worker?task=aggregate",
+      "schedule": "5 0 * * *"
+    }
+  ]
+}

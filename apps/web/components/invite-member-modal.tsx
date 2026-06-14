@@ -24,6 +24,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Mail, Shield, UserPlus, Eye } from "lucide-react";
 import { BaseModal } from "@/components/modals/base-modal";
+import { toast } from "sonner";
 
 interface InviteMemberModalProps {
   workspaceId: string;
@@ -59,12 +60,13 @@ export function InviteMemberModal({ workspaceId }: InviteMemberModalProps) {
         throw new Error(errorText || "Failed to send invitation");
       }
 
+      toast.success("Invitation sent successfully");
       form.reset();
       setOpen(false);
       router.refresh();
     } catch (error) {
       console.error(error);
-      window.alert(error instanceof Error ? error.message : "An unexpected error occurred");
+      toast.error(error instanceof Error ? error.message : "An unexpected error occurred");
     } finally {
       setIsLoading(false);
     }

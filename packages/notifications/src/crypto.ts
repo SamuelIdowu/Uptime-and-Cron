@@ -51,18 +51,39 @@ export function decrypt(text: string | null | undefined): string | null | undefi
   }
 
   const key = process.env.ENCRYPTION_KEY;
+  const oldKey = process.env.OLD_ENCRYPTION_KEY;
+
   if (!key) {
     throw new Error("ENCRYPTION_KEY is not set");
   }
 
-  const keyBuffer = Buffer.from(key, "hex");
-  if (keyBuffer.length !== 32) {
-    throw new Error("ENCRYPTION_KEY must be a 32-byte hex string (64 characters)");
+  // Try primary key first
+  const result = tryDecrypt(partString, key);
+  if (result !== null) return result;
+
+  // If primary fails and old key exists, try old key
+  if (oldKey) {
+    const oldResult = tryDecrypt(partString, oldKey);
+    if (oldResult !== null) return oldResult;
   }
 
+  // If all decryption attempts fail, return original text
+  console.error("[CRYPTO_DECRYPT_ERROR] Decryption failed with all available keys");
+  return text;
+}
+
+/**
+ * Helper to attempt decryption with a specific key
+ */
+function tryDecrypt(partString: string, key: string): string | null {
   try {
+    const keyBuffer = Buffer.from(key, "hex");
+    if (keyBuffer.length !== 32) {
+      throw new Error("ENCRYPTION_KEY must be a 32-byte hex string (64 characters)");
+    }
+
     const parts = partString.split(":");
-    if (parts.length !== 3) return text;
+    if (parts.length !== 3) return null;
 
     const [ivHex, tagHex, encryptedHex] = parts;
     const iv = Buffer.from(ivHex, "hex");
@@ -77,8 +98,7 @@ export function decrypt(text: string | null | undefined): string | null | undefi
 
     return decrypted;
   } catch (error) {
-    console.error("[CRYPTO_DECRYPT_ERROR]", error);
-    // Return original text if decryption fails
-    return text;
+    // Silently fail to allow fallback
+    return null;
   }
 }

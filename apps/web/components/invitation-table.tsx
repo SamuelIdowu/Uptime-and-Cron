@@ -100,7 +100,7 @@ export function InvitationTable({ invitations, isAdmin }: InvitationTableProps) 
                       {isAdmin && (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon-sm" className="opacity-0 group-hover:opacity-100 transition-opacity rounded-sm">
+                            <Button variant="ghost" size="icon-sm" className="transition-opacity rounded-sm">
                               <MoreVertical className="size-4" />
                             </Button>
                           </DropdownMenuTrigger>

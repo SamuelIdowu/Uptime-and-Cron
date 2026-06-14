@@ -39,7 +39,7 @@ export function IncidentTable({ data = [] }: { data?: Incident[] }) {
   }
 
   return (
-    <div className="w-full border border-border bg-card shadow-sm rounded-2xl overflow-hidden">
+    <div className="w-full border border-border bg-card shadow-sm rounded-lg overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>

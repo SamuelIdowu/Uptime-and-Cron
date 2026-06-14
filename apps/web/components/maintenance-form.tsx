@@ -46,6 +46,7 @@ export function MaintenanceForm({ monitors, heartbeats, initialData, onSuccess }
   const formatDateForInput = (date: Date | string | null | undefined) => {
     if (!date) return "";
     const d = new Date(date);
+    if (isNaN(d.getTime())) return "";
     // Adjust for local timezone to match datetime-local's expectations
     return format(d, "yyyy-MM-dd'T'HH:mm");
   };
