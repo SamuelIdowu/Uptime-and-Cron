@@ -12,19 +12,31 @@ SteadyState consists of three main components:
 
 ## 🚀 Deployment Strategies
 
-### Option A: Serverless (Vercel Only) - **Recommended for simplicity**
-This option uses Vercel Cron Jobs to run the monitoring logic. No separate VPS or Docker container is required. The background tasks have been refactored into the Web App for this purpose.
+### Option A: Serverless (Vercel Only) - **Requires Vercel Pro**
+This option uses Vercel Cron Jobs to run the monitoring logic every minute.
+1.  **Vercel Crons**: Vercel automatically detects `vercel.json`.
+2.  **Limitation**: Vercel Hobby plans only support 1 cron/day. **Do not use this option if you are on a Hobby plan.**
 
-1.  **Deploy Web App**: Deploy `apps/web` to Vercel.
-2.  **Database Migration**: Ensure your Neon database is up-to-date (see Database Setup below).
-3.  **Configure Cron Secret**: Add `CRON_SECRET` to your Vercel Environment Variables. This secures your cron endpoints.
-4.  **Vercel Crons**: Vercel will automatically detect `vercel.json` and schedule the tasks:
-    -   `tick`: Every minute (Poller, Heartbeats, Alerts).
-    -   `aggregate`: Daily at 00:05 (Analytics aggregation).
-5.  **Note**: This requires a **Vercel Pro** plan for 1-minute frequency. Hobby plans are limited to 1/day, which is insufficient for real-time monitoring.
+### Option B: Hybrid (Vercel + VPS) - **Recommended for Hobby Users**
+Use Vercel for the UI/API and a separate VPS for the background worker. This is the only way to get 1-minute monitoring without a Vercel Pro subscription.
 
-### Option B: Hybrid (Vercel + VPS)
-Use Vercel for the UI/API and a separate VPS for the background worker (`apps/worker`). This is more precise for high-frequency monitoring and doesn't require a Vercel Pro plan.
+#### **1. Deploy Web App (Vercel)**
+- Deploy to Vercel as usual.
+- The `vercel.json` is pre-configured with daily crons to avoid deployment errors on Hobby plans.
+
+#### **2. Deploy Worker (VPS / Docker)**
+The worker must be a long-running process. Use the provided Docker assets.
+
+1.  **Clone & Configure**:
+    ```bash
+    git clone https://github.com/SamuelIdowu/Uptime-and-Cron.git
+    cd Uptime-and-Cron
+    nano .env # Add production variables
+    ```
+2.  **Launch**:
+    ```bash
+    docker compose up -d --build
+    ```
 
 ---
 
