@@ -247,10 +247,19 @@ importers:
 
   packages/notifications:
     dependencies:
+      '@steady-state/db':
+        specifier: workspace:*
+        version: link:../db
+      drizzle-orm:
+        specifier: ^0.30.10
+        version: 0.30.10(@neondatabase/serverless@0.9.5)(@types/pg@8.11.6)(@types/react@18.3.28)(react@19.2.6)
       resend:
         specifier: ^3.2.0
         version: 3.5.0(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
     devDependencies:
+      tsx:
+        specifier: ^4.10.1
+        version: 4.22.0
       typescript:
         specifier: ^5
         version: 5.9.3
