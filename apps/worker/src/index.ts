@@ -12,10 +12,10 @@ dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
 import cron from "node-cron";
-import { runPoller } from "./poller.js";
-import { checkHeartbeats } from "./heartbeat-checker.js";
-import { sweepAlerts } from "./alert-sweeper.js";
-import { runAggregator } from "./aggregator.js";
+import { runPoller } from "./poller";
+import { checkHeartbeats } from "./heartbeat-checker";
+import { sweepAlerts } from "./alert-sweeper";
+import { runAggregator } from "./aggregator";
 
 // Global Error Handlers
 process.on("unhandledRejection", (reason, promise) => {

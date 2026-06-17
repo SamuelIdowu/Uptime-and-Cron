@@ -55,14 +55,14 @@ export function StatusPageForm({ initialData, onSuccess }: StatusPageFormProps) 
   }, []);
 
   const form = useForm<StatusPageInput>({
-    resolver: zodResolver(statusPageSchema),
+    resolver: zodResolver(statusPageSchema) as any,
     defaultValues: initialData
       ? {
           name: initialData.name,
           slug: initialData.slug,
           description: initialData.description || "",
           logoUrl: initialData.logoUrl || "",
-          published: initialData.published,
+          published: initialData.published ?? false,
           themeConfig: (initialData.themeConfig as any) || { primaryColor: "#00d992", headerText: "" },
           monitorIds: initialData.monitors?.map(m => m.monitorId) || [],
         }

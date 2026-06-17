@@ -23,7 +23,7 @@ export async function GET(
           with: {
             monitor: true,
           },
-          orderBy: (spm, { asc }) => [asc(spm.order)],
+          orderBy: (spm: any, { asc }: any) => [asc(spm.order)],
         },
       },
     });
@@ -69,7 +69,7 @@ export async function PATCH(
 
     // Update monitors if provided
     if (monitorIds) {
-      await db.transaction(async (tx) => {
+      await db.transaction(async (tx: any) => {
         await tx
           .delete(statusPageMonitors)
           .where(eq(statusPageMonitors.statusPageId, id));

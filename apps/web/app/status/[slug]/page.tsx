@@ -34,7 +34,7 @@ export default async function PublicStatusPage({
             },
           },
         },
-        orderBy: (spm, { asc }) => [asc(spm.order)],
+        orderBy: (spm: any, { asc }: any) => [asc(spm.order)],
       },
     },
   });
@@ -43,8 +43,8 @@ export default async function PublicStatusPage({
     notFound();
   }
 
-  const allUp = page.monitors.every(m => m.monitor.status === "up");
-  const someDown = page.monitors.some(m => m.monitor.status === "down");
+  const allUp = page.monitors.every((m: any) => m.monitor.status === "up");
+  const someDown = page.monitors.some((m: any) => m.monitor.status === "down");
 
   return (
     <div className="min-h-screen bg-[#fafafa] dark:bg-black font-sans selection:bg-primary selection:text-black">
@@ -94,7 +94,7 @@ export default async function PublicStatusPage({
           </div>
 
           <div className="grid gap-6">
-            {page.monitors.map(({ monitor }) => {
+            {page.monitors.map(({ monitor }: any) => {
               const uptimeBarData = calculateUptimeBarData(
                 monitor.createdAt,
                 monitor.lastCheckedAt,
@@ -134,7 +134,7 @@ export default async function PublicStatusPage({
                           {monitor.uptime30d ? `${monitor.uptime30d}%` : "100.00%"}
                         </span>
                       </div>
-                      <StatusBadge status={monitor.status} size="sm" />
+                      <StatusBadge status={monitor.status as any} />
                     </div>
                   </div>
 

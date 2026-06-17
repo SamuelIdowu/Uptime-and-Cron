@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build": "tsc",
     "dev": "tsx watch src/index.ts",
     "start": "tsx src/index.ts",
     "lint": "eslint src"
@@ -13,7 +14,7 @@
     "@steady-state/notifications": "workspace:*",
     "axios": "^1.6.8",
     "date-fns": "^4.2.1",
-    "dotenv": "^16.4.5",
+    "dotenv": "^16.6.1",
     "drizzle-orm": "^0.30.10",
     "jsonpath-plus": "^10.4.0",
     "node-cron": "^3.0.3",

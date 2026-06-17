@@ -31,8 +31,8 @@ export default async function InvitePage({
           <p className="text-mute text-sm font-mono uppercase tracking-tight opacity-70">
             This invitation has expired, been revoked, or does not exist in our registry.
           </p>
-          <Button asChild variant="outline" className="w-full eyebrow text-[11px]">
-            <a href="/">Return to Base</a>
+          <Button variant="outline" className="w-full eyebrow text-[11px]" onClick={() => window.location.href = "/"}>
+            Return to Base
           </Button>
         </div>
       </div>

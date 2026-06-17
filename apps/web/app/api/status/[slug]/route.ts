@@ -16,7 +16,7 @@ export async function GET(
           with: {
             monitor: true,
           },
-          orderBy: (spm, { asc }) => [asc(spm.order)],
+          orderBy: (spm: any, { asc }: any) => [asc(spm.order)],
         },
       },
     });

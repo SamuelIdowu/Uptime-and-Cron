@@ -66,7 +66,7 @@ export async function POST(
     }
 
     // 4. Create membership and update invitation status in a transaction
-    await db.transaction(async (tx) => {
+    await db.transaction(async (tx: any) => {
       await tx.insert(teamMembers).values({
         workspaceId: invite.workspaceId,
         userId: userId,

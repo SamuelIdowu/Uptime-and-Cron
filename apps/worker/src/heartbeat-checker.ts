@@ -14,8 +14,8 @@ export async function checkHeartbeats() {
         )
     });
 
-    const globalUserIds = new Set(activeWindows.filter(w => !w.monitorId && !w.heartbeatId).map(w => w.userId));
-    const heartbeatIdsInMaintenance = new Set(activeWindows.filter(w => w.heartbeatId).map(w => w.heartbeatId));
+    const globalUserIds = new Set(activeWindows.filter((w: any) => !w.monitorId && !w.heartbeatId).map((w: any) => w.userId));
+    const heartbeatIdsInMaintenance = new Set(activeWindows.filter((w: any) => w.heartbeatId).map((w: any) => w.heartbeatId));
 
     // Fetch monitors that are not paused and might be late or down
     // We check anything that hasn't pinged within its period
@@ -33,7 +33,7 @@ export async function checkHeartbeats() {
       );
 
     // Filter out heartbeats in maintenance
-    const filteredMonitors = actionableMonitors.filter(m => {
+    const filteredMonitors = actionableMonitors.filter((m: any) => {
         if (globalUserIds.has(m.userId)) return false;
         if (heartbeatIdsInMaintenance.has(m.id)) return false;
         return true;

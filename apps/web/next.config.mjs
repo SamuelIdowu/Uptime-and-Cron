@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  transpilePackages: ["@steady-state/db"],
+  transpilePackages: ["@steady-state/db", "@steady-state/notifications"],
   async headers() {
     return [
       {

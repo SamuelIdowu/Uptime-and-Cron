@@ -56,11 +56,11 @@ export async function runAggregator(dateOverride?: Date) {
 
       if (last30Days.length > 0) {
         const uptime7d = last30Days
-          .filter(d => d.date >= subDays(new Date(), 7))
-          .reduce((acc, d) => acc + parseFloat(d.uptimePercentage), 0) / Math.min(last30Days.length, 7);
+          .filter((d: any) => d.date >= subDays(new Date(), 7))
+          .reduce((acc: number, d: any) => acc + parseFloat(d.uptimePercentage), 0) / Math.min(last30Days.length, 7);
         
         const uptime30d = last30Days
-          .reduce((acc, d) => acc + parseFloat(d.uptimePercentage), 0) / last30Days.length;
+          .reduce((acc: number, d: any) => acc + parseFloat(d.uptimePercentage), 0) / last30Days.length;
 
         await db.update(monitors).set({
           uptime7d: uptime7d.toFixed(2),
@@ -109,11 +109,11 @@ export async function runAggregator(dateOverride?: Date) {
 
       if (last30Days.length > 0) {
         const uptime7d = last30Days
-          .filter(d => d.date >= subDays(new Date(), 7))
-          .reduce((acc, d) => acc + parseFloat(d.uptimePercentage), 0) / Math.min(last30Days.length, 7);
+          .filter((d: any) => d.date >= subDays(new Date(), 7))
+          .reduce((acc: number, d: any) => acc + parseFloat(d.uptimePercentage), 0) / Math.min(last30Days.length, 7);
         
         const uptime30d = last30Days
-          .reduce((acc, d) => acc + parseFloat(d.uptimePercentage), 0) / last30Days.length;
+          .reduce((acc: number, d: any) => acc + parseFloat(d.uptimePercentage), 0) / last30Days.length;
 
         await db.update(heartbeatMonitors).set({
           uptime7d: uptime7d.toFixed(2),

@@ -1,5 +1,5 @@
-import { db } from "./index";
-import * as schema from "./schema";
+import { db } from "./index.js";
+import * as schema from "./schema.js";
 import { subDays, subHours, subMinutes } from "date-fns";
 
 async function main() {

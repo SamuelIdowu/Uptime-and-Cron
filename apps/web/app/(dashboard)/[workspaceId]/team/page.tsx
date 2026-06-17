@@ -34,7 +34,7 @@ export default async function TeamPage({
     with: {
       user: true,
     },
-    orderBy: (members, { asc }) => [asc(members.createdAt)],
+    orderBy: (members: any, { asc }: any) => [asc(members.createdAt)],
   });
 
   // Fetch invitations
@@ -43,7 +43,7 @@ export default async function TeamPage({
       eq(invitations.workspaceId, workspaceId),
       eq(invitations.status, "pending")
     ),
-    orderBy: (invitations, { desc }) => [desc(invitations.createdAt)],
+    orderBy: (invitations: any, { desc }: any) => [desc(invitations.createdAt)],
   });
 
   return (

@@ -3,13 +3,14 @@
     "target": "ESNext",
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "declaration": true,
-    "strict": true,
+    "allowImportingTsExtensions": false,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "outDir": "dist",
-    "rootDir": "src"
+    "strict": true,
+    "noEmit": true,
+    "rootDir": "src",
+    "outDir": "dist"
   },
   "include": ["src/**/*"]
 }

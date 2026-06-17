@@ -21,8 +21,8 @@ export async function runPoller() {
         )
     });
 
-    const globalUserIds = new Set(activeWindows.filter(w => !w.monitorId && !w.heartbeatId).map(w => w.userId));
-    const monitorIdsInMaintenance = new Set(activeWindows.filter(w => w.monitorId).map(w => w.monitorId));
+    const globalUserIds = new Set(activeWindows.filter((w: any) => !w.monitorId && !w.heartbeatId).map((w: any) => w.userId));
+    const monitorIdsInMaintenance = new Set(activeWindows.filter((w: any) => w.monitorId).map((w: any) => w.monitorId));
 
     // 1. Fetch due monitors with targets
     const dueMonitors = await db.query.monitors.findMany({
@@ -39,7 +39,7 @@ export async function runPoller() {
     });
 
     // 2. Filter out monitors in maintenance
-    const filteredMonitors = dueMonitors.filter(m => {
+    const filteredMonitors = dueMonitors.filter((m: any) => {
         if (globalUserIds.has(m.userId)) return false;
         if (monitorIdsInMaintenance.has(m.id)) return false;
         return true;
@@ -47,7 +47,7 @@ export async function runPoller() {
 
     console.log(`[Poller] Found ${dueMonitors.length} monitors (${filteredMonitors.length} after maintenance filter).`);
 
-    const tasks = filteredMonitors.map((monitor) =>
+    const tasks = filteredMonitors.map((monitor: any) =>
       limit(() => checkMonitor(monitor as any))
     );
 

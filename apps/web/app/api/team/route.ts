@@ -55,7 +55,7 @@ export async function GET(req: Request) {
         user: workspaceOwner,
         createdAt: workspaceOwner.createdAt,
       }] : []),
-      ...members.map(m => ({
+      ...members.map((m: any) => ({
         id: m.id,
         userId: m.userId,
         role: m.role,

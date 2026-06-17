@@ -136,7 +136,7 @@ export default async function MonitorDetailPage({
   const currentStatus = monitor.paused ? "paused" : monitor.status;
 
   const regions: Region[] = monitor.targets && monitor.targets.length > 0
-    ? monitor.targets.map((t, idx) => ({
+    ? monitor.targets.map((t: any, idx: number) => ({
         id: `node-${idx}`,
         name: t.url,
         latency: monitor.avgResponseMs || 0,
@@ -188,7 +188,7 @@ export default async function MonitorDetailPage({
                 <div className="flex flex-col gap-2">
                   {monitor.targets && monitor.targets.length > 1 ? (
                     <div className="flex flex-wrap gap-2">
-                      {monitor.targets.map((t, idx) => (
+                      {monitor.targets.map((t: any, idx: number) => (
                         <span key={idx} className="px-2 py-0.5 rounded-sm bg-primary/5 border border-primary/10 text-[10px] text-primary font-mono truncate max-w-[200px]">
                           {t.url}
                         </span>

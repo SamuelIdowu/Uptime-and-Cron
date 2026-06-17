@@ -1,4 +1,4 @@
-import { db, monitors, monitorEvents, monitorChecks, Monitor, dispatchAlerts, maintenanceWindows } from "@steady-state/db";
+import { db, monitors, monitorEvents, monitorChecks, Monitor, dispatchAlerts, maintenanceWindows, incidents, incidentEvents, MaintenanceWindow } from "@steady-state/db";
 import { eq, and, isNull, or, sql, desc, lte, gte } from "drizzle-orm";
 import axios from "axios";
 import pLimit from "p-limit";
@@ -21,8 +21,8 @@ export async function runPoller() {
         )
     });
 
-    const globalUserIds = new Set(activeWindows.filter(w => !w.monitorId && !w.heartbeatId).map(w => w.userId));
-    const monitorIdsInMaintenance = new Set(activeWindows.filter(w => w.monitorId).map(w => w.monitorId));
+    const globalUserIds = new Set(activeWindows.filter((w: MaintenanceWindow) => !w.monitorId && !w.heartbeatId).map((w: MaintenanceWindow) => w.userId));
+    const monitorIdsInMaintenance = new Set(activeWindows.filter((w: MaintenanceWindow) => w.monitorId).map((w: MaintenanceWindow) => w.monitorId));
 
     // 1. Fetch due monitors with targets
     const dueMonitors = await db.query.monitors.findMany({
@@ -39,7 +39,7 @@ export async function runPoller() {
     });
 
     // 2. Filter out monitors in maintenance
-    const filteredMonitors = dueMonitors.filter(m => {
+    const filteredMonitors = (dueMonitors as any[]).filter((m: any) => {
         if (globalUserIds.has(m.userId)) return false;
         if (monitorIdsInMaintenance.has(m.id)) return false;
         return true;
@@ -47,8 +47,8 @@ export async function runPoller() {
 
     console.log(`[Poller] Found ${dueMonitors.length} monitors (${filteredMonitors.length} after maintenance filter).`);
 
-    const tasks = filteredMonitors.map((monitor) =>
-      limit(() => checkMonitor(monitor as any))
+    const tasks = filteredMonitors.map((monitor: any) =>
+      limit(() => checkMonitor(monitor))
     );
 
     await Promise.all(tasks);
@@ -59,7 +59,16 @@ export async function runPoller() {
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-async function performCheckOnTarget(url: string, monitor: Monitor) {
+interface TargetResult {
+  url: string;
+  currentStatus: "up" | "down";
+  httpStatus: number | null;
+  responseMs: number | null;
+  errorMessage: string | null;
+  sslExpiryAt: Date | null;
+}
+
+async function performCheckOnTarget(url: string, monitor: Monitor): Promise<TargetResult> {
   const start = Date.now();
   let currentStatus: "up" | "down" = "up";
   let httpStatus: number | null = null;
@@ -266,6 +275,52 @@ async function checkMonitor(monitor: Monitor & { targets?: { url: string }[] }) 
         errorMessage,
         startedAt: new Date(),
       });
+
+      // --- Incident Management ---
+      if (currentStatus === "down") {
+        // 1. Create Incident
+        const [newIncident] = await db.insert(incidents).values({
+          monitorId: monitor.id,
+          status: "investigating",
+          title: `Monitor ${monitor.name} is down`,
+          description: errorMessage || "Monitor failed consensus checks",
+          startedAt: new Date(),
+        }).returning();
+
+        // 2. Create Initial Event
+        await db.insert(incidentEvents).values({
+          incidentId: newIncident.id,
+          status: "investigating",
+          description: "Monitor detected as down. Investigating root cause.",
+        });
+      } else if (currentStatus === "up" && monitor.status === "down") {
+        // 1. Find active incident
+        const activeIncident = await db.query.incidents.findFirst({
+          where: and(
+            eq(incidents.monitorId, monitor.id),
+            isNull(incidents.resolvedAt)
+          ),
+          orderBy: [desc(incidents.startedAt)]
+        });
+
+        if (activeIncident) {
+          // 2. Resolve Incident
+          await db.update(incidents)
+            .set({
+              status: "resolved",
+              resolvedAt: new Date(),
+              updatedAt: new Date(),
+            })
+            .where(eq(incidents.id, activeIncident.id));
+
+          // 3. Create Closing Event
+          await db.insert(incidentEvents).values({
+            incidentId: activeIncident.id,
+            status: "resolved",
+            description: "Monitor recovered. Incident resolved automatically.",
+          });
+        }
+      }
 
       // 4. Trigger alert
       console.log(`[Alert] ${monitor.name} is ${currentStatus.toUpperCase()}`);

@@ -1,5 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
-import { db, statusPages } from "@steady-state/db";
+import { db, statusPages, StatusPage } from "@steady-state/db";
 import { eq, desc } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { FileText, Plus, ExternalLink, Globe, Settings2, Trash2 } from "lucide-react";
@@ -68,7 +68,7 @@ export default async function StatusPagesPage({
           </section>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {pages.map((page) => (
+            {pages.map((page: StatusPage) => (
               <div 
                 key={page.id}
                 className="group relative flex flex-col bg-card border border-border rounded-md p-6 transition-all hover:border-primary hover:shadow-[0_0_20px_rgba(0,217,146,0.02)]"
